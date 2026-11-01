@@ -25,10 +25,11 @@ test("validation excludes draft-only destinations and invalid media/schedule com
   assert.throws(() => input({ channel: "youtube-shorts" }));
   assert.throws(() => input({ channel: "pinterest", mediaUrl: "https://example.com/photo.png" }));
   assert.throws(() => input({ channel: "tiktok", mediaUrl: "file:///tmp/video.mp4" }));
+  assert.throws(() => input({ channel: "instagram" }));
   assert.throws(() => input({ channel: "x", text: "x".repeat(281) }));
 });
 
-test("all nine destination adapters use the official API shapes without live requests", async () => {
+test("all ten destination adapters use the official API shapes without live requests", async () => {
   Object.assign(process.env, {
     X_USER_ACCESS_TOKEN: "test-x-token", BLUESKY_IDENTIFIER: "test.bsky.social", BLUESKY_APP_PASSWORD: "test-password",
     THREADS_USER_ID: "1234", THREADS_ACCESS_TOKEN: "test-threads-token", MASTODON_BASE_URL: "https://mastodon.example", MASTODON_ACCESS_TOKEN: "test-mastodon-token",
@@ -48,7 +49,7 @@ test("all nine destination adapters use the official API shapes without live req
     return Response.json({ id: "threads1" });
   };
   for (const channel of PUBLISH_CHANNELS) {
-    const media = ["tiktok", "youtube-shorts", "pinterest"].includes(channel.id);
+    const media = ["tiktok", "youtube-shorts", "pinterest", "instagram"].includes(channel.id);
     const data = input({ channel: channel.id, ...(media && { mediaUrl: "https://cdn.example.com/asset.mp4" }), ...(channel.id === "youtube-shorts" && { title: "Launch video" }), ...(channel.id === "pinterest" && { boardId: "12345" }), ...(channel.mode === "aggregator" && { scheduleAt: "2030-01-01T00:00:00Z" }) });
     const receipt = await publish(data, new AbortController().signal, fakeFetch);
     assert.equal(receipt.channel, channel.id);
@@ -57,9 +58,13 @@ test("all nine destination adapters use the official API shapes without live req
   assert.ok(connections().every((c) => c.configured));
   assert.equal(calls.find((c) => c.url.includes("graph.threads.net"))!.body.auto_publish_text, "true");
   const aggregators = calls.filter((c) => c.url.includes("ayrshare"));
-  assert.equal(aggregators.length, 4);
+  assert.equal(aggregators.length, 5);
   assert.ok(aggregators.every((c) => c.body.scheduleDate === "2030-01-01T00:00:00Z" && typeof c.body.idempotencyKey === "string"));
   assert.deepEqual(aggregators.find((c) => (c.body.platforms as string[])[0] === "youtube")?.body.youTubeOptions, { title: "Launch video", shorts: true, visibility: "private" });
+  assert.deepEqual(aggregators.find((c) => (c.body.platforms as string[])[0] === "instagram")?.body, {
+    post: "Meet our product", platforms: ["instagram"], idempotencyKey: aggregators.find((c) => (c.body.platforms as string[])[0] === "instagram")!.body.idempotencyKey,
+    mediaUrls: ["https://cdn.example.com/asset.mp4"], scheduleDate: "2030-01-01T00:00:00Z", instagramOptions: { reels: true },
+  });
   assert.ok(calls.find((c) => c.url.includes("mastodon"))?.headers.has("Idempotency-Key"));
   await assert.rejects(publish(input(), new AbortController().signal, async () => new Response("secret upstream details", { status: 403 })), (e: Error) => !e.message.includes("secret"));
 });

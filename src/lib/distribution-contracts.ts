@@ -10,8 +10,9 @@ export const PUBLISH_CHANNELS = [
   { id: "youtube-shorts", name: "YouTube Shorts", mode: "aggregator", limit: 4500 },
   { id: "pinterest", name: "Pinterest", mode: "aggregator", limit: 500 },
   { id: "linkedin-page", name: "LinkedIn page", mode: "aggregator", limit: 3000 },
+  { id: "instagram", name: "Instagram", mode: "aggregator", limit: 2200 },
 ] as const;
-export const publishChannel = z.enum(["x", "bluesky", "threads", "mastodon", "telegram", "tiktok", "youtube-shorts", "pinterest", "linkedin-page"]);
+export const publishChannel = z.enum(["x", "bluesky", "threads", "mastodon", "telegram", "tiktok", "youtube-shorts", "pinterest", "linkedin-page", "instagram"]);
 export const httpsUrl = z.string().url().refine((s) => { const u = new URL(s); return u.protocol === "https:" && !u.username && !u.password; }, "Use a public HTTPS URL without credentials.");
 export const publishRequest = z.object({
   requestId: z.string().uuid(), channel: publishChannel, text: z.string().trim().min(1).max(5000),
@@ -23,7 +24,7 @@ export const publishRequest = z.object({
   const length = [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(data.text)].length;
   if (length > config.limit) ctx.addIssue({ code: "custom", message: `${config.name} text is limited to ${config.limit} characters.`, path: ["text"] });
   if (config.mode === "direct" && (data.mediaUrl || data.scheduleAt)) ctx.addIssue({ code: "custom", message: "Direct publishing supports immediate text posts. Use an aggregator channel for media or scheduling." });
-  if (["tiktok", "youtube-shorts", "pinterest"].includes(data.channel) && !data.mediaUrl && !data.renderJobId) ctx.addIssue({ code: "custom", message: "This channel requires a public media URL.", path: ["mediaUrl"] });
+  if (["tiktok", "youtube-shorts", "pinterest", "instagram"].includes(data.channel) && !data.mediaUrl && !data.renderJobId) ctx.addIssue({ code: "custom", message: "This channel requires a public media URL.", path: ["mediaUrl"] });
   if (data.channel === "youtube-shorts" && !data.title) ctx.addIssue({ code: "custom", message: "YouTube requires a title.", path: ["title"] });
   if (data.channel === "pinterest" && !data.boardId) ctx.addIssue({ code: "custom", message: "Pinterest requires a board ID.", path: ["boardId"] });
 });
