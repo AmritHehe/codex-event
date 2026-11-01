@@ -4,6 +4,7 @@ import { ArrowRightIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import Link from "next/link";
 import { useRef } from "react";
+import { GenerateForm } from "@/components/GenerateForm";
 import { EASE, HeroStage } from "./client";
 
 function Line({ children, delay }: { children: React.ReactNode; delay: number }) {
@@ -81,6 +82,7 @@ export function Hero({ channels }: { channels: number }) {
             </Link>
           </motion.div>
         </div>
+        <GenerateForm />
       </div>
 
       <div ref={stage} className="mx-auto mt-16 max-w-[1320px] [perspective:1600px]">

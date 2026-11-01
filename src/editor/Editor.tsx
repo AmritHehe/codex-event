@@ -4,6 +4,8 @@ import { ArrowArcLeftIcon, ArrowArcRightIcon, BroadcastIcon } from "@phosphor-ic
 import { Player } from "@remotion/player";
 import Link from "next/link";
 import { useEffect } from "react";
+import { GenerateForm } from "@/components/GenerateForm";
+import { saveProject } from "@/lib/project-storage";
 import { LaunchVideo } from "@/video/LaunchVideo";
 import { ASPECTS, aspectSchema, FPS, projectDuration } from "@/video/schema";
 import { Inspector } from "./Inspector";
@@ -76,7 +78,7 @@ function EditorShell() {
         <div className="mx-auto w-56">
           <Segmented label="Aspect ratio" value={project.aspect} options={aspectSchema.options} onChange={(aspect) => edit(ops.setProject({ aspect }))} />
         </div>
-        <Link href="/distribution" className="press inline-flex h-8 items-center gap-1.5 rounded-lg bg-ink px-3 text-[13px] font-medium text-white hover:bg-ink/85">
+        <Link href="/distribution" onClick={() => { try { saveProject(project); } catch { /* autosave may be blocked */ } }} className="press inline-flex h-8 items-center gap-1.5 rounded-lg bg-ink px-3 text-[13px] font-medium text-white hover:bg-ink/85">
           <BroadcastIcon size={15} weight="bold" />
           Distribute
         </Link>
@@ -88,6 +90,11 @@ function EditorShell() {
       </aside>
 
       <main className="flex min-h-0 min-w-0 flex-col">
+        <GenerateForm compact onGenerated={(next) => {
+          edit(() => next, undefined, { sceneId: next.scenes[0].id, layerId: null });
+          player.current?.pause();
+          player.current?.seekTo(0);
+        }} />
         {/* Size container: the stage fits the free area at any aspect without letterboxing. */}
         <div className="grid min-h-0 flex-1 place-items-center p-6 [container-type:size]">
           <div
