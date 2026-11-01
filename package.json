@@ -6,14 +6,22 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "studio": "remotion studio src/video/index.ts",
+    "check:video": "tsx scripts/check-video.ts"
   },
   "dependencies": {
+    "@remotion/google-fonts": "4.0.539",
+    "@remotion/player": "^4.0.539",
+    "@remotion/transitions": "4.0.539",
     "next": "16.4.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "remotion": "^4.0.539",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@remotion/cli": "^4.0.539",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -21,6 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "packageManager": "pnpm@8.15.0"
