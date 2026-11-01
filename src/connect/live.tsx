@@ -59,7 +59,9 @@ export const latest = (cs: Connection[]) => cs.reduce<Connection | null>((a, c) 
 
 /** "Claude Code v2.1.4": MCP clientInfo names map to our display names when we know them. */
 export function agentLabel(c: { client: string; version?: string }) {
-  const name = AGENT_CLIENTS.find((a) => a.id === c.client)?.name ?? c.client;
+  // Real clientInfo names seen in the wild: "codex-mcp-client", "claude-code", "gemini-cli-mcp-client".
+  const id = /codex/i.test(c.client) ? "codex" : /claude/i.test(c.client) ? "claude-code" : /gemini/i.test(c.client) ? "gemini-cli" : c.client;
+  const name = AGENT_CLIENTS.find((a) => a.id === id)?.name ?? c.client;
   return c.version ? `${name} v${c.version.replace(/^v/, "")}` : name;
 }
 
