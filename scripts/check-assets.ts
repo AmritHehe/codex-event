@@ -6,6 +6,7 @@ import { sampleProject } from "../src/video/sample";
 import { decodeImage } from "../src/server/assets/blob";
 import { resolveRenderMedia } from "../src/server/assets/render-media";
 import { publishRequest } from "../src/lib/distribution-contracts";
+import { POST as upload } from "../src/app/api/assets/route";
 test("image signatures and types are checked before upload", () => {
   assert.throws(() => decodeImage("data:image/png;base64,YQ=="));
   assert.throws(() => decodeImage("data:image/svg+xml;base64,YQ=="));
@@ -29,4 +30,23 @@ test("queue exposes the uploaded URL only after the render task finishes", async
   assert.equal(queue.get(job.jobId)?.status, "rendering");
   finish("https://example.public.blob.vercel-storage.com/video.mp4"); await new Promise((r) => setTimeout(r, 0));
   assert.equal(queue.get(job.jobId)?.url, "https://example.public.blob.vercel-storage.com/video.mp4"); queue.close();
+});
+
+test("asset API rejects unauthorized, malformed and oversized uploads before storage", async () => {
+  const previous = process.env.DISTRIBUTION_TOKEN;
+  const token = "judge-test-key-at-least-24-characters";
+  process.env.DISTRIBUTION_TOKEN = token;
+  const request = (body: string, key = token, type = "application/json") => new Request("http://localhost/api/assets", {
+    method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": type }, body,
+  });
+  try {
+    assert.equal((await upload(request("{}", "wrong-key"))).status, 401);
+    assert.equal((await upload(request("{}", token, "text/plain"))).status, 415);
+    assert.equal((await upload(request("{"))).status, 400);
+    assert.equal((await upload(request(JSON.stringify({ dataUrl: "data:image/svg+xml;base64,YQ==" })))).status, 400);
+    assert.equal((await upload(request("x".repeat(2_800_001)))).status, 413);
+  } finally {
+    if (previous === undefined) delete process.env.DISTRIBUTION_TOKEN;
+    else process.env.DISTRIBUTION_TOKEN = previous;
+  }
 });

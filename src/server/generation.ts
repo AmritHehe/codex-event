@@ -3,6 +3,7 @@ import { archiveScreenshot } from "./assets/blob";
 import { projectSchema } from "@/video/schema";
 import { requireGateway } from "./ai";
 import { validateProject } from "./project";
+import { ApiError } from "./http";
 import { providers, type Providers } from "./providers";
 import { research } from "./research";
 import { publicUrl, type ProductPage } from "./scrape";
@@ -24,11 +25,12 @@ export function withScreenshot(project: z.infer<typeof projectSchema>, page: Pro
 /** A stat is a claim: keep it only when its number appears in the sources. Scenes left empty are dropped. */
 export function withSourcedStats(project: z.infer<typeof projectSchema>, sources: string) {
   const text = sources.replace(/,/g, "");
-  const sourced = (value: number) => new RegExp(`(^|[^\\d.])${String(value).replace(".", "\\.")}(?!\\d)`).test(text);
+  const sourced = (value: number) => new RegExp(`(^|[^\\d.+-])${String(value).replace(".", "\\.")}(?!\\d|\\.\\d)`).test(text);
   const scenes = project.scenes
     .map((s) => ({ ...s, layers: s.layers.filter((l) => l.type !== "stat" || sourced(l.value)) }))
     .filter((s) => s.layers.length);
-  return { ...project, scenes: scenes.length ? scenes : project.scenes };
+  if (!scenes.length) throw new ApiError(502, "The generated film contained only unsupported statistics. Please retry.");
+  return { ...project, scenes };
 }
 
 // Art direction comes first in the output so the model commits to an angle before writing scenes.

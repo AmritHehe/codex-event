@@ -23,7 +23,8 @@ export const publishRequest = z.object({
   const config = PUBLISH_CHANNELS.find((c) => c.id === data.channel)!;
   const length = [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(data.text)].length;
   if (length > config.limit) ctx.addIssue({ code: "custom", message: `${config.name} text is limited to ${config.limit} characters.`, path: ["text"] });
-  if (config.mode === "direct" && (data.mediaUrl || data.scheduleAt)) ctx.addIssue({ code: "custom", message: "Direct publishing supports immediate text posts. Use an aggregator channel for media or scheduling." });
+  if (data.renderJobId && data.mediaUrl) ctx.addIssue({ code: "custom", message: "Send either renderJobId or mediaUrl, not both." });
+  if (config.mode === "direct" && (data.mediaUrl || data.renderJobId || data.scheduleAt)) ctx.addIssue({ code: "custom", message: "Direct publishing supports immediate text posts. Use an aggregator channel for media or scheduling." });
   if (["tiktok", "youtube-shorts", "pinterest", "instagram"].includes(data.channel) && !data.mediaUrl && !data.renderJobId) ctx.addIssue({ code: "custom", message: "This channel requires a public media URL.", path: ["mediaUrl"] });
   if (data.channel === "youtube-shorts" && !data.title) ctx.addIssue({ code: "custom", message: "YouTube requires a title.", path: ["title"] });
   if (data.channel === "pinterest" && !data.boardId) ctx.addIssue({ code: "custom", message: "Pinterest requires a board ID.", path: ["boardId"] });
