@@ -1,28 +1,25 @@
 "use client";
 
-import { CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowUpRightIcon, CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { AGENTS, type AgentId } from "./agents";
 import { ASSET_LABEL, AUTOMATION, CATEGORIES, CHANNELS, type Automation, type CategoryId, type Channel } from "./channels";
 import { AgentGlyph, ChannelLogo } from "./icons";
 import { KitSheet, Tick, useKit } from "./Kit";
-import { DistributionTools } from "./DistributionTools";
+import { ConnectionsSheet, PublishSheet, connectionSummary, isPublishable, usePublishing, type PublishId } from "./Publisher";
+import { Fact, label, mono, note, pad } from "./ui";
 
 const EASE_UI = [0.23, 1, 0.32, 1] as const;
 const EASE_ENTER = [0.16, 1, 0.3, 1] as const;
 const LEVELS: Automation[] = ["full", "assisted", "manual"];
 const RESEARCHED = "2026-11-01";
 
-const pad = (n: number, w = 2) => String(n).padStart(w, "0");
 const CH_NO = Object.fromEntries(CHANNELS.map((c, i) => [c.id, pad(i + 1, 3)]));
 const AGENT_NO = Object.fromEntries(AGENTS.map((a, i) => [a.id, pad(i + 1)])) as Record<AgentId, string>;
 const CATEGORY = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])) as Record<CategoryId, string>;
 const short = (name: string) => name.replace(/ agent$/, "");
 
-const mono = "font-mono text-[11px] uppercase tracking-[0.08em] tabular-nums";
-const label = `${mono} text-muted`;
-const note = "font-mono text-[11px] leading-relaxed text-muted";
 
 type Filters = { category: CategoryId | null; automation: Automation | null; agent: AgentId | null; q: string };
 const NO_FILTERS: Filters = { category: null, automation: null, agent: null, q: "" };
@@ -82,6 +79,18 @@ function IndexButton({ on, dim, onClick, children }: { on: boolean; dim: boolean
   );
 }
 
+/** Text button for the top bar: the workspace's tools sit beside the timecode, not in the reading flow. */
+function BarButton({ onClick, children }: { onClick: (keyboard: boolean) => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={(e) => onClick(e.detail === 0)}
+      className={`${mono} press flex h-8 shrink-0 items-center gap-2 rounded-md px-2 text-ink transition-colors duration-150 hover:bg-hover`}
+    >
+      {children}
+    </button>
+  );
+}
+
 const strip = "-mx-4 flex overflow-x-auto px-4 [scrollbar-width:none] md:-mx-10 md:px-10 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0";
 
 function Row({ c, onOpen, picked, onPick }: { c: Channel; onOpen: (c: Channel, keyboard: boolean) => void; picked: boolean; onPick: () => void }) {
@@ -133,18 +142,22 @@ const fade = {
 };
 
 /** Right-hand sheet. Esc closes, Tab stays inside, focus returns to the opener. */
-export function Drawer({ title, instant, onClose, children }: { title: string; instant: boolean; onClose: (keyboard: boolean) => void; children: React.ReactNode }) {
+export function Drawer({ title, wide, instant, onClose, children }: { title: string; wide?: boolean; instant: boolean; onClose: (keyboard: boolean) => void; children: React.ReactNode }) {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    ref.current?.focus();
     return () => opener?.focus();
   }, []);
+  // Moving between sheets inside the drawer starts the next one at the top, with focus on the dialog.
+  useEffect(() => {
+    ref.current?.scrollTo({ top: 0 });
+    ref.current?.focus();
+  }, [title]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") return onClose(true);
     if (e.key !== "Tab" || !ref.current) return;
-    const items = ref.current.querySelectorAll<HTMLElement>("button:not(:disabled), textarea, input, a[href]");
+    const items = ref.current.querySelectorAll<HTMLElement>("button:not(:disabled):not([tabindex='-1']), textarea, input, select, a[href]");
     const first = items[0];
     const last = items[items.length - 1];
     if (e.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) {
@@ -171,7 +184,7 @@ export function Drawer({ title, instant, onClose, children }: { title: string; i
         initial="hidden"
         animate="shown"
         exit="hidden"
-        className="fixed inset-y-0 right-0 z-40 flex w-[min(520px,100vw)] flex-col overflow-y-auto overscroll-contain border-l border-line bg-panel shadow-pop"
+        className={`fixed inset-y-0 right-0 z-40 flex ${wide ? "w-[min(1000px,100vw)]" : "w-[min(520px,100vw)]"} flex-col overflow-y-auto overscroll-contain border-l border-line bg-panel shadow-pop`}
         style={{ outline: "none" }}
       >
         <button
@@ -187,16 +200,7 @@ export function Drawer({ title, instant, onClose, children }: { title: string; i
   );
 }
 
-function Fact({ name, children }: { name: string; children: React.ReactNode }) {
-  return (
-    <div className="grid gap-2 border-t border-line py-5 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-6">
-      <dt className={`${label} pt-0.5`}>{name}</dt>
-      <dd className="text-[14px] leading-[1.6] text-ink">{children}</dd>
-    </div>
-  );
-}
-
-function ChannelSheet({ c, picked, onPick }: { c: Channel; picked: boolean; onPick: () => void }) {
+function ChannelSheet({ c, picked, onPick, actions }: { c: Channel; picked: boolean; onPick: () => void; actions?: React.ReactNode }) {
   const agent = AGENTS.find((a) => a.id === c.agent)!;
   return (
     <div className="flex flex-col px-6 pt-6 pb-10 sm:px-8">
@@ -208,14 +212,17 @@ function ChannelSheet({ c, picked, onPick }: { c: Channel; picked: boolean; onPi
       </div>
       <h2 className="mt-4 text-[clamp(32px,6vw,44px)] leading-[0.95] font-semibold tracking-[-0.045em] text-balance">{c.name}</h2>
       <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.55] text-muted">{c.what}</p>
-      <button
-        onClick={onPick}
-        aria-pressed={picked}
-        className={`press mt-6 flex h-10 items-center gap-2.5 self-start rounded-md border px-4 text-[14px] font-medium ${picked ? "border-accent bg-accent-soft text-ink" : "border-ink text-ink hover:bg-ink hover:text-canvas"}`}
-      >
-        {picked ? <CheckIcon size={15} weight="bold" className="text-accent" /> : <PlusIcon size={15} />}
-        {picked ? "In your kit" : "Add to kit"}
-      </button>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <button
+          onClick={onPick}
+          aria-pressed={picked}
+          className={`press flex h-10 items-center gap-2.5 rounded-md border px-4 text-[14px] font-medium ${picked ? "border-accent bg-accent-soft text-ink" : "border-ink text-ink hover:bg-ink hover:text-canvas"}`}
+        >
+          {picked ? <CheckIcon size={15} weight="bold" className="text-accent" /> : <PlusIcon size={15} />}
+          {picked ? "In your kit" : "Add to kit"}
+        </button>
+        {actions}
+      </div>
       <dl className="mt-8 border-b border-line">
         <Fact name="Automation">
           <Meter a={c.automation} />
@@ -245,11 +252,24 @@ function ChannelSheet({ c, picked, onPick }: { c: Channel; picked: boolean; onPi
   );
 }
 
+/** What the drawer shows. Tools opened from another sheet remember it, so Back returns there. */
+type Panel =
+  | { kind: "channel"; c: Channel }
+  | { kind: "kit" }
+  | { kind: "connections"; back?: Panel }
+  | { kind: "publish"; id: PublishId; back?: Panel };
+
+const BYID = Object.fromEntries(CHANNELS.map((c) => [c.id, c]));
+const panelTitle = (p: Panel): string =>
+  p.kind === "channel" ? p.c.name : p.kind === "kit" ? "Launch kit" : p.kind === "connections" ? "Connections" : `Publish to ${BYID[p.id].name}`;
+const backLabel = (p?: Panel) => (!p ? undefined : p.kind === "kit" ? "Back to kit" : p.kind === "channel" ? `Back to ${p.c.name}` : "Back");
+
 export function Hub() {
   const [f, setF] = useState<Filters>(NO_FILTERS);
-  const [open, setOpen] = useState<Channel | "kit" | null>(null);
+  const [open, setOpen] = useState<Panel | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const kit = useKit();
+  const pub = usePublishing();
   const [instant, setInstant] = useState(false);
   const search = useRef<HTMLInputElement>(null);
   const set = (patch: Partial<Filters>) => setF((prev) => ({ ...prev, ...patch }));
@@ -259,14 +279,14 @@ export function Hub() {
   const filtered = f.category || f.automation || f.agent || f.q;
   const count = (a: Automation) => CHANNELS.filter((c) => c.automation === a).length;
 
-  const show = (panel: Channel | "kit", keyboard: boolean) => {
+  const show = (panel: Panel, keyboard: boolean) => {
     setInstant(keyboard);
     setOpen(panel);
   };
   // Kept in catalog order so the kit reads like the index.
   const pick = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : CHANNELS.map((c) => c.id).filter((x) => x === id || p.includes(x))));
   const generate = (keyboard: boolean) => {
-    show("kit", keyboard);
+    show({ kind: "kit" }, keyboard);
     if (kit.status === "idle") kit.generate(picked);
   };
   const close = (keyboard: boolean) => {
@@ -289,11 +309,16 @@ export function Hub() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="mx-auto max-w-[1440px] px-4 pb-32 md:px-10">
-        <div className={`${label} flex items-center justify-between border-b border-line py-3.5`}>
-          <span>Distribution</span>
-          <span>
-            CH 001 to {pad(CHANNELS.length, 3)}
-            <span className="hidden sm:inline"> · TRK 01 to {pad(AGENTS.length)}</span>
+        <div className={`${label} flex items-center justify-between gap-4 border-b border-line py-1.5`}>
+          <span className="hidden sm:inline">Distribution</span>
+          <span className="flex min-w-0 flex-1 items-center justify-end gap-1 sm:flex-none">
+            <span className="mr-3 hidden lg:inline">
+              CH 001 to {pad(CHANNELS.length, 3)} · TRK 01 to {pad(AGENTS.length)}
+            </span>
+            <BarButton onClick={(keyboard) => show({ kind: "connections" }, keyboard)}>
+              Connections
+              {connectionSummary(pub) && <span className="text-accent">{connectionSummary(pub)}</span>}
+            </BarButton>
           </span>
         </div>
 
@@ -320,8 +345,6 @@ export function Hub() {
             <p className={note}>Platform rules researched {RESEARCHED}. They change often, so check before you rely on one.</p>
           </div>
         </header>
-
-        <DistributionTools />
 
         <div role="group" aria-label="Filter by automation" className="grid grid-cols-3 border-y border-line">
           {LEVELS.map((a, i) => {
@@ -454,7 +477,7 @@ export function Hub() {
                     </header>
                     <ul>
                       {rows.map((c) => (
-                        <Row key={c.id} c={c} onOpen={show} picked={picked.includes(c.id)} onPick={() => pick(c.id)} />
+                        <Row key={c.id} c={c} onOpen={(c, keyboard) => show({ kind: "channel", c }, keyboard)} picked={picked.includes(c.id)} onPick={() => pick(c.id)} />
                       ))}
                     </ul>
                   </section>
@@ -496,11 +519,39 @@ export function Hub() {
 
       <AnimatePresence custom={instant}>
         {open && (
-          <Drawer key={open === "kit" ? "kit" : open.id} title={open === "kit" ? "Launch kit" : open.name} instant={instant} onClose={close}>
-            {open === "kit" ? (
-              <KitSheet picked={picked} kit={kit} onRemove={pick} />
+          // One stable key: moving between sheets swaps content without replaying the slide.
+          <Drawer key="sheet" title={panelTitle(open)} instant={instant} onClose={close}>
+            {open.kind === "kit" ? (
+              <KitSheet picked={picked} kit={kit} onRemove={pick} pub={pub} onPublish={(id) => setOpen({ kind: "publish", id, back: open })} />
+            ) : open.kind === "channel" ? (
+              <ChannelSheet
+                c={open.c}
+                picked={picked.includes(open.c.id)}
+                onPick={() => pick(open.c.id)}
+                actions={
+                  isPublishable(open.c.id) && (
+                    <button
+                      onClick={() => setOpen({ kind: "publish", id: open.c.id as PublishId, back: open })}
+                      className="press flex h-10 items-center gap-2 rounded-md border border-line px-4 text-[14px] font-medium hover:border-ink"
+                    >
+                      Publish to {open.c.name}
+                      <ArrowUpRightIcon size={14} />
+                    </button>
+                  )
+                }
+              />
+            ) : open.kind === "connections" ? (
+              <ConnectionsSheet pub={pub} onPublish={(id) => setOpen({ kind: "publish", id, back: open })} back={open.back && (() => setOpen(open.back!))} />
             ) : (
-              <ChannelSheet c={open} picked={picked.includes(open.id)} onPick={() => pick(open.id)} />
+              <PublishSheet
+                key={open.id}
+                id={open.id}
+                pub={pub}
+                draft={kit.drafts.find((d) => d.channelId === open.id)?.text}
+                onDraft={(text) => kit.edit(open.id, text)}
+                back={open.back && (() => setOpen(open.back!))}
+                backLabel={backLabel(open.back)}
+              />
             )}
           </Drawer>
         )}
