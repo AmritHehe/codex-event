@@ -1,10 +1,15 @@
 "use client";
 
 import { ArrowRightIcon, ArrowUpRightIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { label, mono, pad, primary, secondary, small } from "@/distribution/ui";
+import type { PublishTarget } from "./PublishDemo";
+
+// Remotion renders client-only.
+const PublishDemo = dynamic(() => import("./PublishDemo").then((m) => m.PublishDemo), { ssr: false });
 
 const Library = z.object({
   credits: z.number().catch(0),
@@ -39,6 +44,7 @@ const when = (iso: string) => {
 export function Dashboard() {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
+  const [publish, setPublish] = useState<PublishTarget | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -120,6 +126,9 @@ export function Dashboard() {
             <Link href="/#no-agent" className={`${secondary} inline-flex items-center`}>
               or generate with free credits
             </Link>
+            <button onClick={() => setPublish({ id: null, name: "Sample launch film", drafts: [] })} className={`${secondary} inline-flex items-center`}>
+              Try the publish demo
+            </button>
           </div>
         </section>
       )}
@@ -131,16 +140,18 @@ export function Dashboard() {
           </h2>
           <ol>
             {data.projects.map((p, i) => (
-              <Film key={p.id} p={p} n={i + 1} />
+              <Film key={p.id} p={p} n={i + 1} onPublish={() => setPublish({ id: p.id, name: p.name, drafts: p.drafts })} />
             ))}
           </ol>
         </section>
       )}
+
+      {publish && <PublishDemo target={publish} onClose={() => setPublish(null)} />}
     </div>
   );
 }
 
-function Film({ p, n }: { p: Project; n: number }) {
+function Film({ p, n, onPublish }: { p: Project; n: number; onPublish: () => void }) {
   return (
     <li className="border-t border-line py-8">
       <div className="grid gap-4 md:grid-cols-[48px_minmax(0,1fr)_auto] md:items-baseline">
@@ -153,9 +164,14 @@ function Film({ p, n }: { p: Project; n: number }) {
             <span>Updated {when(p.updatedAt)}</span>
           </p>
         </div>
-        <Link href={`/studio?live=${encodeURIComponent(p.id)}`} className={`${secondary} inline-flex items-center gap-2 justify-self-start`}>
-          Open in Studio <ArrowUpRightIcon size={14} />
-        </Link>
+        <div className="flex flex-wrap gap-2 justify-self-start">
+          <button onClick={onPublish} className={`${primary} inline-flex items-center`}>
+            Publish
+          </button>
+          <Link href={`/studio?live=${encodeURIComponent(p.id)}`} className={`${secondary} inline-flex items-center gap-2`}>
+            Open in Studio <ArrowUpRightIcon size={14} />
+          </Link>
+        </div>
       </div>
 
       {p.assets.length > 0 && (
