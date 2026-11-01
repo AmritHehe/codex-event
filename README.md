@@ -20,7 +20,7 @@ Node 22+, pnpm.
 |---|---|
 | `src/video/` | Video engine. `schema.ts` is the contract: a `Project` JSON (scenes → layers) rendered by Remotion (`LaunchVideo.tsx`). Relative imports only (Remotion bundler ignores tsconfig paths). |
 | `src/editor/` | Studio editor: store (undo/redo, autosave), panels, timeline, inspector. |
-| `src/distribution/` | Channel catalog (66), agents (9), hub UI. |
+| `src/distribution/` | Channel catalog (66), agents (9), hub UI and [distribution workspace](docs/distribution.md). |
 | `src/landing/` | Landing page sections. |
 | `PLAN.md` | Phases, owners, research. |
 
