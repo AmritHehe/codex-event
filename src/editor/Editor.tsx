@@ -9,6 +9,7 @@ import { saveProject } from "@/lib/project-storage";
 import { LaunchVideo } from "@/video/LaunchVideo";
 import { ASPECTS, aspectSchema, FPS, projectDuration } from "@/video/schema";
 import { Inspector } from "./Inspector";
+import { ChatEdit } from "./ChatEdit";
 import { LayersPanel, ScenesPanel } from "./Panels";
 import { EditorProvider, focusFrame, ops, useEditor } from "./store";
 import { Timeline } from "./Timeline";
@@ -117,6 +118,7 @@ function EditorShell() {
             />
           </div>
         </div>
+        <ChatEdit />
         <Timeline />
       </main>
 
