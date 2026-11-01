@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useTransform, type MotionValue } from "motion/react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { AUTOMATION, CHANNELS, type Automation, type Channel } from "@/distribution/channels";
 import { ChannelLogo } from "@/distribution/icons";
 import { easeOutCubic, LABEL, rand, usePinProgress, useSize } from "./client";
@@ -33,7 +33,9 @@ function layout(w: number, h: number) {
 }
 type Layout = ReturnType<typeof layout>;
 
-function Clip({ c, i, p, size, L }: { c: Channel; i: number; p: MotionValue<number>; size: { w: number; h: number }; L: Layout }) {
+type ClipProps = { c: Channel; i: number; p: MotionValue<number>; size: { w: number; h: number }; L: Layout; onHover: (c: Channel | null) => void };
+
+function Clip({ c, i, p, size, L, onHover }: ClipProps) {
   const g = GROUPS.findIndex((x) => x.id === c.automation);
   const idx = ITEMS[g].indexOf(c);
   const tx = L.head + L.pad + (idx % L.cols) * L.step;
@@ -51,13 +53,31 @@ function Clip({ c, i, p, size, L }: { c: Channel; i: number; p: MotionValue<numb
   const icon = Math.round(L.step * 0.4);
 
   return (
-    <motion.div title={c.name} style={{ x, y, rotate, width: s, height: s }} className="absolute top-0 left-0">
-      <span className="absolute inset-0 grid place-items-center rounded-[6px] border border-line bg-panel text-ink">
-        <ChannelLogo c={c} size={icon} />
+    <motion.div
+      tabIndex={0}
+      aria-label={c.name}
+      onPointerEnter={() => onHover(c)}
+      onPointerLeave={() => onHover(null)}
+      onFocus={() => onHover(c)}
+      onBlur={() => onHover(null)}
+      style={{ x, y, rotate, width: s, height: s }}
+      className="group absolute top-0 left-0 outline-none hover:z-10 focus-visible:z-10"
+    >
+      {/* Lift lives on an inner wrapper so it never fights the scroll-driven motion values. */}
+      <span className="absolute inset-0 rounded-[6px] transition-[transform,box-shadow] duration-150 ease-out group-hover:-translate-y-0.5 group-hover:ring-2 group-hover:ring-ink/25 group-focus-visible:-translate-y-0.5 group-focus-visible:ring-2 group-focus-visible:ring-ink motion-reduce:translate-y-0! motion-reduce:transition-none">
+        <span className="absolute inset-0 grid place-items-center rounded-[6px] border border-line bg-panel text-ink">
+          <ChannelLogo c={c} size={icon} />
+        </span>
+        <motion.span style={{ opacity: fill }} className={`absolute inset-0 grid place-items-center rounded-[6px] ${GROUPS[g].fill} ${GROUPS[g].fg}`}>
+          <ChannelLogo c={c} size={icon} />
+        </motion.span>
       </span>
-      <motion.span style={{ opacity: fill }} className={`absolute inset-0 grid place-items-center rounded-[6px] ${GROUPS[g].fill} ${GROUPS[g].fg}`}>
-        <ChannelLogo c={c} size={icon} />
-      </motion.span>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 rounded-[6px] bg-ink px-2 py-1 font-mono text-[11px] leading-none tracking-[0.06em] whitespace-nowrap text-white uppercase opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+      >
+        {c.name}
+      </span>
     </motion.div>
   );
 }
@@ -69,6 +89,7 @@ export function Sorter() {
   const size = useSize(stage);
   const L = layout(size.w, size.h);
   const counts = useTransform(p, [0.5, 0.65], [0, 1]);
+  const [hover, setHover] = useState<Channel | null>(null);
 
   return (
     <section ref={ref} id="channels" data-scene="Channels" className="relative h-[320vh] border-t border-line motion-reduce:h-auto">
@@ -108,8 +129,10 @@ export function Sorter() {
                     <span className={`${LABEL} text-faint`}>V{gi + 1}</span>
                     <motion.span style={{ opacity: counts }} className="flex items-baseline gap-2 md:flex-col md:gap-1">
                       <span className="text-[13px] font-medium md:text-[15px]">{AUTOMATION[g.id].label}</span>
-                      <span className={`${LABEL} tabular-nums`}>
-                        {ITEMS[gi].length} {ITEMS[gi].length === 1 ? "channel" : "channels"}
+                      <span className={`${LABEL} tabular-nums`} aria-live="polite">
+                        {hover?.automation === g.id
+                          ? `${hover.name} · ${AUTOMATION[g.id].label}`
+                          : `${ITEMS[gi].length} ${ITEMS[gi].length === 1 ? "channel" : "channels"}`}
                       </span>
                     </motion.span>
                   </div>
@@ -117,7 +140,7 @@ export function Sorter() {
               );
             })}
           {/* Positions depend on the measured stage, so clips mount client-side only. */}
-          <div aria-hidden>{size.w > 0 && ORDERED.map((c, i) => <Clip key={c.id} c={c} i={i} p={p} size={size} L={L} />)}</div>
+          <div>{size.w > 0 && ORDERED.map((c, i) => <Clip key={c.id} c={c} i={i} p={p} size={size} L={L} onHover={setHover} />)}</div>
         </div>
       </div>
     </section>
