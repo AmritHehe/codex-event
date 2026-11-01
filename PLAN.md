@@ -74,15 +74,15 @@ The contract in `src/lib/contracts.ts` (zod schemas + `postJson`) is the handsha
 
 ### Phase 4: Render & export
 **Backend (collaborator)**: render server (`server/render.ts`, `pnpm render-server`, port 3200)
-- [ ] B4.1 Bundle `src/video/index.ts` once at startup (`@remotion/bundler`), reuse for every job
-- [ ] B4.2 `POST /render` per `renderRequest` → validate (400 on failure) → `renderJob`
-- [ ] B4.3 `GET /render/:jobId` → `renderJob`; `GET /files/:jobId.mp4` serves the result from `out/` (gitignored)
-- [ ] B4.4 Composition `LaunchVideo`, inputProps `{ project }`; `selectComposition` reads size/length from `calculateMetadata` in `src/video/Root.tsx`
-- [ ] B4.5 One job at a time (in-memory queue is fine); CORS for `http://localhost:3000`. `node:http` or Hono. Pin `@remotion/bundler` + `@remotion/renderer` to the `remotion` version
+- [x] B4.1 Bundle `src/video/index.ts` once at startup (`@remotion/bundler`), reuse for every job
+- [x] B4.2 `POST /render` per `renderRequest` → validate (400 on failure) → `renderJob`
+- [x] B4.3 `GET /render/:jobId` → `renderJob`; `GET /files/:jobId.mp4` serves the result from `out/` (gitignored)
+- [x] B4.4 Composition `LaunchVideo`, inputProps `{ project }`; `selectComposition` reads size/length from `calculateMetadata` in `src/video/Root.tsx`
+- [x] B4.5 One job at a time (in-memory queue is fine); CORS for `http://localhost:3000`. `node:http` or Hono. Pin `@remotion/bundler` + `@remotion/renderer` to the `remotion` version
 - Done when: sample renders in 16:9, 9:16, 1:1 with Player-identical timing; bad JSON → 400; a crashed render → `status: "error"`, never hangs
 
 **Frontend (us)**
-- [ ] F4.1 Export popover in Studio: formats → one job each → progress on a timeline track → download (uses `RENDER_URL`)
+- [x] F4.1 Export popover in Studio: formats → one job each → progress on a timeline track → download (uses `RENDER_URL`)
 
 ### Phase 5: Distribution kit
 - [x] Distribution hub: 66 channels, 9 agents, automation level per channel (`/distribution`)
