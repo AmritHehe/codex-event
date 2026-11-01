@@ -56,6 +56,10 @@ export type AgentEvent = z.infer<typeof agentEvent>;
 // Every tool validates with these schemas and returns readable validation errors so the agent can fix and retry.
 export const mcpTools = {
   get_brief: { description: "Product URL and notes the user entered on Shipcast. Call this first.", input: z.object({}) },
+  research_product: {
+    description: "Sourced research brief for a product URL: features, proof, competitors, third-party mentions, voice and visuals, each with its source URL. Costs 1 workspace credit (cached URLs too). Use only these facts in the film and copy.",
+    input: z.object({ url: z.string().url() }),
+  },
   get_guide: { description: "Exact JSON Schema for scenes, layers and themes, plus style rules and an example project.", input: z.object({}) },
   create_project: {
     description: "Start a new launch film. Returns projectId and the Studio URL the user is watching.",

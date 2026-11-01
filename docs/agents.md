@@ -53,7 +53,7 @@ The agent calls `get_brief`, `get_guide`, researches the product, then `create_p
 | `GET /api/projects/:id` | cookie | Project being built, only for its own workspace. |
 | `GET /api/workspace/events` | cookie | Server-Sent Events, one `agentEvent` JSON per `data:` line, `: ping` every 15 s. |
 
-**Credits.** New workspaces get `FREE_CREDITS` (20) for server-paid AI. With a workspace cookie, `/api/kit` costs 1 per channel and `/api/generate` costs 2, reserved up front and refunded if the call fails; `402` when the balance is too low. Requests without a workspace cookie work as before. Agent (MCP) calls never cost credits.
+**Credits.** New workspaces get `FREE_CREDITS` (20) for server-paid AI. With a workspace cookie, `/api/kit` costs 1 per channel, `/api/generate` costs 2 and `/api/research` costs 1, reserved up front and refunded if the call fails; `402` when the balance is too low. Requests without a workspace cookie work as before. Agent (MCP) calls are free except `research_product` (1 credit, server-paid Exa research; see `docs/research.md`).
 
 **Storage.** Workspaces live in `.data/workspaces/<id>/workspace.json` (override with `WORKSPACE_DATA_DIR`), written under a per-workspace lock with atomic rename; uploaded images in `assets/`. Tokens are stored only as SHA-256 hashes.
 

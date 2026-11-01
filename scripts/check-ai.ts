@@ -6,7 +6,7 @@ import { POST as editPost } from "../src/app/api/edit/route";
 import { POST as kitPost } from "../src/app/api/kit/route";
 import { applyEdits } from "../src/server/edits";
 import { validateProject } from "../src/server/project";
-import { generate } from "../src/server/generation";
+import { generate, withSourcedStats } from "../src/server/generation";
 import { generateKit } from "../src/server/kit";
 import { providers, type Providers } from "../src/server/providers";
 import { ApiError, jsonRoute } from "../src/server/http";
@@ -26,7 +26,10 @@ const source = {
 const page = parseScrape(source, "https://example.com/");
 const signal = new AbortController().signal;
 const request = (data: unknown) => new Request("http://localhost/api/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
-const deps = (result: unknown): Providers => ({ scrapeProduct: async () => page, structured: async (schema) => schema.parse(result) });
+// Research needs Exa; these tests cover the page-only path (scripts/check-research.ts covers research).
+const noExa = async () => { throw new ApiError(503, "no Exa in tests"); };
+const deps = (result: unknown): Providers => ({ scrapeProduct: async () => page, structured: async (schema) => schema.parse(result), exa: noExa });
+const film = (project: unknown) => ({ direction: { angle: "URL to film", hook: "Ship it loud", proofPoints: [], visualConcept: "Bold" }, project });
 const original = { ...providers };
 const key = process.env.AI_GATEWAY_API_KEY;
 const oidc = process.env.VERCEL_OIDC_TOKEN;
@@ -70,13 +73,21 @@ test("Firecrawl request includes markdown, branding and screenshot and hides ups
 });
 
 test("generation uses the scraped screenshot, including when the model omits media", async () => {
-  const result = await generate(page.url, signal, deps(sampleProject));
+  const result = await generate(page.url, signal, deps(film(sampleProject)));
   const images = result.project.scenes.flatMap((s) => s.layers).filter((l) => l.type === "image");
   assert.ok(images.length);
   assert.ok(images.every((l) => l.src === page.brand.screenshot));
   const noImages = { ...sampleProject, scenes: sampleProject.scenes.map((s) => ({ ...s, layers: s.layers.filter((l) => l.type !== "image") })) };
-  const added = await generate(page.url, signal, deps(noImages));
+  const added = await generate(page.url, signal, deps(film(noImages)));
   assert.ok(added.project.scenes.flatMap((s) => s.layers).some((l) => l.type === "image" && l.src === page.brand.screenshot));
+});
+
+test("generation drops stats whose number the sources never state", async () => {
+  const stats = (markdown: string) => withSourcedStats(sampleProject, markdown).scenes.flatMap((s) => s.layers).filter((l) => l.type === "stat");
+  assert.equal(stats("Launch videos in 600 seconds").length, 0, "60 is not 600");
+  assert.equal(stats("From URL to film in 60 seconds").length, 1);
+  const result = await generate(page.url, signal, deps(film(sampleProject)));
+  assert.ok(!result.project.scenes.some((s) => s.id === "stat"), "unsourced stat scene removed");
 });
 
 test("targeted edits preserve untouched IDs and objects without mutating input", () => {
@@ -103,6 +114,7 @@ test("kit deduplicates requested channels and rejects missing, duplicate or unsu
   assert.deepEqual(await generateKit({ project: sampleProject, channels: ["reddit"] }, signal, deps({ posts: reddit })), { posts: reddit });
   const manual = await generateKit({ project: sampleProject, channels: ["hacker-news"] }, signal, {
     scrapeProduct: async () => page,
+    exa: noExa,
     structured: async () => { throw new Error("HN preparation must not generate copy"); },
   });
   assert.equal(manual.posts[0].channelId, "hacker-news");
@@ -112,7 +124,7 @@ test("kit deduplicates requested channels and rejects missing, duplicate or unsu
 
 test("actual API routes validate requests and responses end to end with stubbed providers", async () => {
   process.env.AI_GATEWAY_API_KEY = "test-only";
-  Object.assign(providers, deps(sampleProject));
+  Object.assign(providers, deps(film(sampleProject)));
   const generated = await generatePost(request({ url: page.url }));
   assert.equal(generated.status, 200);
   assert.equal((await generated.json()).brand.name, "Acme");

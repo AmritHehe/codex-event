@@ -5,13 +5,15 @@ import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { CHANNELS } from "@/distribution/channels";
 import { createProjectResult, mcpTools } from "@/lib/agent-contracts";
+import { ApiError } from "@/server/http";
 import { projectSchema } from "@/video/schema";
 import { sampleProject } from "@/video/sample";
+import { cachedResearch, research } from "@/server/research";
 import { WorkspaceError, toProject, workspaces, type WorkspaceStore } from "@/server/workspace/store";
 
 type Tools = typeof mcpTools;
 type ToolName = keyof Tools;
-type Ctx = { workspaceId: string; origin: string; store: WorkspaceStore };
+type Ctx = { workspaceId: string; origin: string; store: WorkspaceStore; signal: AbortSignal };
 type Handlers = { [K in ToolName]: (input: z.output<Tools[K]["input"]>, ctx: Ctx) => Promise<unknown> };
 
 const MAX_BODY_BYTES = 4_000_000; // save_asset dataUrl (2.8 MB of base64) plus JSON-RPC envelope
@@ -45,7 +47,22 @@ function decodeImage(dataUrl: string) {
 const handlers: Handlers = {
   async get_brief(_input, { store, workspaceId }) {
     const ws = await store.get(workspaceId);
-    return ws?.brief ?? { url: null, message: "The user has not entered a product URL on Shipcast yet. Ask them for it." };
+    if (!ws?.brief) return { url: null, message: "The user has not entered a product URL on Shipcast yet. Ask them for it." };
+    const brief = await cachedResearch(ws.brief.url);
+    return brief ? { ...ws.brief, research: brief } : ws.brief;
+  },
+  async research_product({ url }, { store, workspaceId, signal }) {
+    // Server-paid (Exa + model), so it costs 1 credit: reserved first, refunded if research fails.
+    const remaining = await store.spendCredits(workspaceId, 1);
+    try {
+      const brief = await research(url, signal);
+      store.publish(workspaceId, { type: "credits", remaining });
+      return brief;
+    } catch (error) {
+      await store.addCredits(workspaceId, 1);
+      if (error instanceof ApiError) fail(error.message);
+      throw error;
+    }
   },
   async get_guide() {
     const { body } = await loadSkill();
@@ -131,10 +148,10 @@ function register(server: McpServer) {
   for (const name of Object.keys(mcpTools) as ToolName[]) {
     const tool = mcpTools[name];
     server.registerTool(name, { description: tool.description, inputSchema: tool.input as z.ZodObject }, async (input, extra) => {
-      const ctx = extra.http?.authInfo?.extra as Omit<Ctx, "store"> | undefined;
+      const ctx = extra.http?.authInfo?.extra as Omit<Ctx, "store" | "signal"> | undefined;
       if (!ctx?.workspaceId) throw new Error("Not authenticated.");
       try {
-        const result = await (handlers[name] as (input: unknown, ctx: Ctx) => Promise<unknown>)(input, { ...ctx, store: workspaces() });
+        const result = await (handlers[name] as (input: unknown, ctx: Ctx) => Promise<unknown>)(input, { ...ctx, store: workspaces(), signal: extra.mcpReq.signal });
         return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         if (error instanceof WorkspaceError) throw new Error(error.message);

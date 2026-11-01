@@ -4,6 +4,7 @@ import { kitRequest, kitResponse } from "@/lib/contracts";
 import { KIT_CHANNELS } from "@/lib/kit-channels";
 import { ApiError } from "./http";
 import { providers, type Providers } from "./providers";
+import { cachedResearch } from "./research";
 
 /** Hand-written guidance where we have it; every other catalog channel is briefed from its research notes. */
 function brief(id: string) {
@@ -14,7 +15,7 @@ function brief(id: string) {
   return { id: c.id, label: c.name, guidance: `${c.what} Formats that work here: ${c.assets.join(", ")}. What works: ${c.tip} This is a draft a person will post.` };
 }
 
-export async function generateKit(input: z.infer<typeof kitRequest>, signal: AbortSignal, deps: Providers = providers) {
+export async function generateKit(input: z.infer<typeof kitRequest>, signal: AbortSignal, deps: Providers = providers, briefUrl?: string) {
   const ids = [...new Set(input.channels)];
   if (ids.length > 10) throw new ApiError(400, "Choose up to 10 channels per kit.");
   const channels = ids.map(brief);
@@ -22,9 +23,13 @@ export async function generateKit(input: z.infer<typeof kitRequest>, signal: Abo
   // Manual-only channels (Hacker News bans AI-written posts) get a prep checklist, never generated copy.
   const isManual = (id: string) => CHANNELS.find((c) => c.id === id)?.automation === "manual";
   const writing = channels.filter((c) => !isManual(c!.id));
+  // Cached research only (no paid call here), for the film's CTA link or else the workspace brief URL.
+  const ctaUrl = input.project.scenes.flatMap((s) => s.layers).flatMap((l) => (l.type === "cta" && l.url ? [l.url] : []))[0];
+  const productUrl = ctaUrl ?? briefUrl;
+  const research = writing.length && productUrl ? await cachedResearch(productUrl) : null;
   const kit = writing.length ? await deps.structured(kitResponse,
-    "Write distribution drafts based on the project. Return exactly one post per requested channelId, following its guidance. Preserve product links from CTA layers. No markdown fences. Separate X thread posts with blank lines. Hashtags belong in the optional hashtags field. Drafts only; do not claim anything has been published.",
-    { project: input.project, channels: writing }, signal) : { posts: [] };
+    `Write distribution drafts based on the project. Return exactly one post per requested channelId, following its guidance. Preserve product links from CTA layers. No markdown fences. Separate X thread posts with blank lines. Hashtags belong in the optional hashtags field. Drafts only; do not claim anything has been published.${research ? " Use the research brief to be specific: name real features and their benefits, cite proof only as stated there, and match its voice and sampleLines. Never add facts that are not in the project or the research." : ""}`,
+    { project: input.project, channels: writing, ...(research ? { research } : {}) }, signal) : { posts: [] };
   if (kit.posts.length !== writing.length || new Set(kit.posts.map((p) => p.channelId)).size !== writing.length || kit.posts.some((p) => !ids.includes(p.channelId) || isManual(p.channelId) || !p.text.trim())) {
     throw new ApiError(502, "The copy agent returned incomplete drafts. Please try again.");
   }

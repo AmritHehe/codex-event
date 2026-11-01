@@ -11,12 +11,11 @@ You are building a launch film for the user's product. The film is JSON (scenes 
 
 1. **Brief.** Call `shipcast.get_brief`. It returns the product URL (and optional notes) the user entered on Shipcast. If it is empty, ask the user for their product URL.
 2. **Schema.** Call `shipcast.get_guide` once. It returns the exact JSON Schema and an example. Follow it exactly; it wins over anything in this file.
-3. **Research the product.** Fetch the URL and at most 2 more pages that matter (pricing, features, docs home). Extract:
-   - product name, one-line value proposition, the problem it removes, 3 to 4 concrete features
+3. **Research the product.** If `get_brief` already returned `research`, use it. Otherwise call `shipcast.research_product` with the URL first (1 credit). Its brief is your source of truth: product, features, proof, competitors, third-party mentions, voice and visuals, each with a `sourceUrl`. Then fetch the URL yourself only for what the brief lacks:
    - the main call to action and its URL
    - brand colors (`<meta name="theme-color">`, CSS variables, logo colors) and fonts if obvious
-   - a real product image: `og:image`, a hero screenshot, or a product shot URL (https)
-   - numbers ONLY if the site states them (users, stars, speed). Never invent metrics, quotes, logos or prices.
+   - a real product image: a brief `visuals` entry, `og:image`, a hero screenshot, or a product shot URL (https)
+   Every fact in the film and copy must come from the brief or the pages you read. Use `proof` and `mentions` for proof, reuse `voice.sampleLines`, and never invent metrics, quotes, customers, logos or prices beyond them.
 4. **Create.** `shipcast.create_project` with the name, URL, `aspect: "16:9"` and a theme built from the brand (see Theme). Tell the user the Studio URL it returns.
 5. **Scenes.** `shipcast.put_scene` once per scene, in order:
    1. **Hook** (60 to 75 frames): badge + a 3 to 6 word headline that names the pain or the payoff.

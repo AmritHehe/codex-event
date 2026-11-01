@@ -18,6 +18,7 @@ import * as briefRoute from "../src/app/api/workspace/brief/route";
 import * as eventsRoute from "../src/app/api/workspace/events/route";
 import * as workspaceRoute from "../src/app/api/workspace/route";
 import * as mcpRoute from "../src/app/mcp/route";
+import { ApiError } from "../src/server/http";
 import { providers } from "../src/server/providers";
 import { parseScrape } from "../src/server/scrape";
 import { FileWorkspaceStore, WorkspaceError, workspaces } from "../src/server/workspace/store";
@@ -25,6 +26,7 @@ import { FileWorkspaceStore, WorkspaceError, workspaces } from "../src/server/wo
 // The process-wide store is created lazily, so pointing it at a throwaway directory here is early enough.
 const dataDir = mkdtempSync(join(tmpdir(), "shipcast-agents-"));
 process.env.WORKSPACE_DATA_DIR = dataDir;
+process.env.RESEARCH_DATA_DIR = join(dataDir, "research");
 
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 const busSize = (id: string) => (globalThis as { __shipcastBus?: Map<string, Set<unknown>> }).__shipcastBus?.get(id)?.size ?? 0;
@@ -200,9 +202,11 @@ test("credits: kit and generate bill the cookie workspace only on success; anony
   const page = parseScrape({ success: true, data: { markdown: "# Acme", screenshot: "https://cdn.example.com/p.png", metadata: { ogSiteName: "Acme" }, branding: { colors: { primary: "#ff4f17" } } } }, "https://example.com/");
   const stub = (result: unknown, fail = false) => Object.assign(providers, {
     scrapeProduct: async () => page,
+    exa: async () => { throw new Error("no Exa in tests"); },
     structured: async (schema: { parse: (v: unknown) => unknown }) => { if (fail) throw new Error("provider down"); return schema.parse(result); },
   });
   try {
+    const film = { direction: { angle: "a", hook: "h", proofPoints: [], visualConcept: "v" }, project: sampleProject };
     const { workspace: ws, cookie } = await newWorkspace();
     const stream = await listen(cookie);
     const post = (route: { POST: (r: Request) => Promise<Response> }, body: unknown, withCookie = true) =>
@@ -212,19 +216,19 @@ test("credits: kit and generate bill the cookie workspace only on success; anony
     stub({ posts: [{ channelId: "x", text: "Ship loud" }, { channelId: "linkedin-personal", text: "We built it" }] });
     assert.equal((await post(kitRoute, { project: sampleProject, channels: ["x", "linkedin-personal"] })).status, 200);
     assert.equal(await credits(), 18);
-    stub(sampleProject);
+    stub(film);
     assert.equal((await post(generateRoute, { url: "https://example.com" })).status, 200);
     assert.equal(await credits(), 16);
     assert.equal((await post(generateRoute, { url: "https://example.com" }, false)).status, 200, "anonymous still works");
     assert.equal(await credits(), 16);
-    stub(sampleProject, true);
+    stub(film, true);
     assert.equal((await post(generateRoute, { url: "https://example.com" })).status, 502);
     assert.equal(await credits(), 16, "failed work is refunded");
     assert.equal((await post(generateRoute, { url: "bad" })).status, 400);
     assert.equal(await credits(), 16, "invalid input is never billed");
 
     await workspaces().spendCredits(ws.id, 15);
-    stub(sampleProject);
+    stub(film);
     const broke = await post(generateRoute, { url: "https://example.com" });
     assert.equal(broke.status, 402);
     assert.match((await broke.json()).error, /Not enough credits: this needs 2 and you have 1/);
@@ -368,4 +372,40 @@ test("2026-07-28 clients (per-request clientInfo envelope) are recorded as conne
   assert.equal(data(await client.callTool({ name: "get_brief", arguments: {} })).url, null);
   assert.deepEqual((await workspaces().get(ws.id))!.connections.map((c) => c.client), ["modern-agent"]);
   await client.close();
+});
+
+test("MCP research_product bills 1 credit, refunds failures, and get_brief carries the cached brief", async () => {
+  const original = { ...providers };
+  const key = process.env.AI_GATEWAY_API_KEY;
+  process.env.AI_GATEWAY_API_KEY = "test-only";
+  const { workspace: ws, token, cookie } = await newWorkspace();
+  const url = "https://acme-research.dev/";
+  await fetch(`${origin}/api/workspace/brief`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: JSON.stringify({ url }) });
+  const client = new Client({ name: "researcher", version: "1" });
+  await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`), { requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+  const credits = async () => (await workspaces().get(ws.id))!.credits;
+  const research = (target: string) => client.callTool({ name: "research_product", arguments: { url: target } });
+  try {
+    assert.equal(data(await client.callTool({ name: "get_brief", arguments: {} })).research, undefined);
+    Object.assign(providers, { exa: async () => { throw new ApiError(502, "Product research failed. Check Exa credits and try again."); } });
+    assert.match(errorText(await research(url)), /Product research failed/);
+    assert.match(errorText(await research("http://localhost:3000")), /public http/);
+    assert.equal(await credits(), 20, "failures are refunded");
+
+    Object.assign(providers, {
+      exa: async (path: string) => ({ results: path === "/contents" ? [{ url, title: "Acme", text: "Acme turns URLs into launch films." }] : [] }),
+      structured: async (schema: { parse: (v: unknown) => unknown }) => schema.parse({
+        product: { name: "Acme", oneLiner: "Launch films from a URL", category: "Video", audience: "Founders", problem: "Videos take a week", sourceUrl: url },
+        features: [], proof: [], mentionUrls: [], competitors: [], voice: { adjectives: ["direct"], sampleLines: [] },
+      }),
+    });
+    const brief = data(await research(url));
+    assert.equal(brief.product.name, "Acme");
+    assert.equal(await credits(), 19);
+    assert.equal(data(await client.callTool({ name: "get_brief", arguments: {} })).research.product.name, "Acme");
+  } finally {
+    Object.assign(providers, original);
+    if (key === undefined) delete process.env.AI_GATEWAY_API_KEY; else process.env.AI_GATEWAY_API_KEY = key;
+    await client.close();
+  }
 });

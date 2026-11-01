@@ -2,6 +2,7 @@
 // Both sides import these schemas. Changing one is a breaking change: do it in its own small PR.
 import { z } from "zod";
 import { projectSchema } from "@/video/schema";
+import { researchBrief } from "./research-contracts";
 
 export const apiError = z.object({ error: z.string() });
 
@@ -16,6 +17,7 @@ export const generateResponse = z.object({
     logo: z.string().url().optional(),
     screenshot: z.string().url().optional(),
   }),
+  research: researchBrief.optional(), // sourced product research, when Exa is configured
 });
 
 // POST /api/edit: natural-language change to the current project.

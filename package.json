@@ -15,7 +15,8 @@
     "studio": "remotion studio src/video/index.ts",
     "check:video": "tsx scripts/check-video.ts",
     "check:ai": "tsx --test scripts/check-ai.ts",
-    "check:agents": "tsx --test scripts/check-agents.ts"
+    "check:agents": "tsx --test scripts/check-agents.ts",
+    "check:research": "tsx --test scripts/check-research.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "4.0.106",

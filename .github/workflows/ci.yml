@@ -25,3 +25,4 @@ jobs:
       - run: pnpm check:video
       - run: pnpm check:ai
       - run: pnpm check:agents
+      - run: pnpm check:research
