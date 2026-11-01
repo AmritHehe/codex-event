@@ -35,12 +35,12 @@ Run: `pnpm dev` (Next) + `pnpm render-server` (Node). Remotion Studio: `pnpm stu
 - [x] git init + Next.js scaffold
 - [x] plan
 
-### Phase 1 — Layered video engine (the core)
-- [ ] Layer schema (zod): project → scenes → layers (text, image, shape, device-screenshot, logo, cta), theme, aspect
-- [ ] Remotion compositions render any project JSON; animations (fade/slide/pop/typewriter/zoom) per layer
-- [ ] "Launch" template: hook → problem → product screenshot → features → CTA
-- [ ] Aspect-ratio aware layout (9:16 / 1:1 / 16:9)
-- [ ] Player preview page in Next
+### Phase 1 — Layered video engine (the core) ✅
+- [x] Layer schema (zod): project → scenes → layers (text, image, shape, device-screenshot, logo, cta), theme, aspect
+- [x] Remotion compositions render any project JSON; animations (fade/slide/pop/typewriter/zoom) per layer
+- [x] "Launch" template: hook → problem → product screenshot → features → CTA
+- [x] Aspect-ratio aware layout (9:16 / 1:1 / 16:9)
+- [x] Player preview page in Next
 
 ### Phase 2 — Editor
 - [ ] Editor shell: scenes list · player · inspector
