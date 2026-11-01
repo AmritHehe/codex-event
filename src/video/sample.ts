@@ -1,4 +1,5 @@
 import type { Project } from "./schema";
+import { THEME_PRESETS } from "./themes";
 
 // Mock app screenshot as an inline SVG so the sample works offline, in the Player and in renders.
 const bars = [40, 65, 52, 80, 70, 95, 88]
@@ -16,16 +17,7 @@ export const sampleProject: Project = {
   id: "sample",
   name: "Shipcast launch",
   aspect: "16:9",
-  theme: {
-    background: "#0B0B0F",
-    surface: "#16161D",
-    text: "#F5F5F7",
-    muted: "#9A9AA6",
-    accent: "#C6FF3D",
-    accent2: "#7C5CFF",
-    headingFont: "Bricolage Grotesque",
-    bodyFont: "Inter",
-  },
+  theme: THEME_PRESETS[0].theme,
   scenes: [
     {
       id: "hook",
