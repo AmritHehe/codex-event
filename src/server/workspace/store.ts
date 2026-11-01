@@ -72,6 +72,8 @@ export interface WorkspaceStore {
   addCredits(workspaceId: string, amount: number): Promise<number>;
   createProject(workspaceId: string, input: NewProject): Promise<ProjectRecord>;
   getProject(workspaceId: string, projectId: string): Promise<ProjectRecord | null>;
+  /** Full project records (assets, drafts) for the dashboard library. */
+  listProjects(workspaceId: string): Promise<ProjectRecord[]>;
   /** Atomically change a project; the callback may throw WorkspaceError to abort without writing. */
   updateProject<T>(workspaceId: string, projectId: string, change: (project: ProjectRecord) => T): Promise<T>;
   saveAsset(workspaceId: string, projectId: string, asset: NewAsset): Promise<Asset>;
@@ -239,6 +241,10 @@ export class FileWorkspaceStore implements WorkspaceStore {
   async getProject(workspaceId: string, projectId: string) {
     const data = await this.read(workspaceId);
     return data?.projects.find((p) => p.id === projectId) ?? null;
+  }
+
+  async listProjects(workspaceId: string) {
+    return (await this.read(workspaceId))?.projects ?? [];
   }
 
   updateProject<T>(workspaceId: string, projectId: string, change: (project: ProjectRecord) => T) {
