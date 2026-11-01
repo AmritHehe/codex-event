@@ -1,0 +1,7 @@
+{
+  "name": "shipcast",
+  "owner": { "name": "Shipcast" },
+  "plugins": [
+    { "name": "shipcast", "source": "./plugin", "description": "Launch films and launch copy, built by your own Claude Code." }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "shipcast",
+  "description": "Build editable launch films and launch copy with your own Claude subscription. Pairs with the Shipcast MCP server.",
+  "version": "0.1.0",
+  "author": { "name": "Shipcast" }
+}

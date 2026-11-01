@@ -123,3 +123,33 @@ Phase 5 implementation: the copy agent ships in the Phase 3 PR. The distribution
 - [ ] Landing: timeline-as-page concept, scroll playhead HUD
 - [ ] Studio: pro editing-tool chrome (tracks, timecode, hairlines)
 - [ ] Distribution: editorial index of channels and agents
+
+## Phase 10: Bring your own agent (the core bet)
+
+Users connect the AI they already pay for (Claude Code, Codex CLI, Gemini CLI). Their agent connects to **our hosted MCP server** and builds the film with their subscription; the web app watches it happen live. We never touch subscription credentials (provider terms forbid proxying consumer plans): the user's CLI is always the client.
+
+Contract: `src/lib/agent-contracts.ts` (MCP tool schemas, workspace API, live event stream). Agent instructions: `plugin/skills/shipcast-launch/SKILL.md` (single source; the MCP server also serves it as the `launch` prompt so Codex and Gemini get it too).
+
+**Connect flow**
+1. `/connect`: pick Claude Code / Codex / Gemini CLI, paste product URL (saved as the workspace brief).
+2. Copy one command with the workspace token, e.g. `claude mcp add --transport http shipcast <origin>/mcp --header "Authorization: Bearer <token>"`.
+3. Page flips to "Connected: Claude Code" on the agent's first MCP call.
+4. User runs `/shipcast:launch` (plugin) or `/mcp__shipcast__launch` (MCP prompt). The agent calls `get_brief`, scrapes, `create_project`, then `put_scene` per scene: the Studio timeline fills live.
+5. Free credits (`FREE_CREDITS`) cover server-side humanised copy for users with no agent. Memes come from agents with image tools (Codex, Gemini) via `save_asset`.
+6. Posting via the Phase 5 publishers.
+
+**Backend (collaborator)**
+- [ ] B10.1 Workspace store: anonymous workspace + random token (hash at rest), httpOnly cookie for web. File store in dev (`.data/`), Upstash Redis via Vercel Marketplace for deploy
+- [ ] B10.2 MCP server at `/mcp` (Streamable HTTP, `mcp-handler` + official SDK), Bearer token auth, tools exactly per `mcpTools`; `get_guide` returns `z.toJSONSchema(projectSchema)` + SKILL.md rules + `sampleProject`; record `clientInfo` as a connection
+- [ ] B10.3 MCP prompt `launch` serving SKILL.md (so it shows up as a slash command in every client)
+- [ ] B10.4 `GET /api/workspace/events` SSE per `agentEvent`; `GET /api/projects/:id`; `POST /api/workspace/brief`
+- [ ] B10.5 Credits ledger: start at `FREE_CREDITS`, debit `/api/kit` (1 per channel) and `/api/generate`; 402 with a clear message when empty
+- [ ] B10.6 Stretch: MCP OAuth (so "connect" is a browser approve screen instead of a token)
+- [ ] B10.7 Verify install commands for Codex (`codex mcp add`) and Gemini (`gemini mcp add`) against current CLI docs
+
+**Frontend (us)**
+- [ ] F10.1 `/connect` onboarding: agent picker, URL brief, one-command copy, live connection state, "run /shipcast:launch" step
+- [ ] F10.2 Live build in Studio: scenes stream onto the timeline as the agent writes them (activity feed of tool calls)
+- [ ] F10.3 Credits UI: remaining credits, kit uses credits when no agent is connected
+- [ ] F10.4 Landing: primary CTA becomes "Connect your Claude"; URL form stays as the no-agent path
+- [x] F10.5 Claude Code plugin + marketplace (`plugin/`, `.claude-plugin/marketplace.json`): `/plugin marketplace add AmritHehe/codex-event`, `/plugin install shipcast@shipcast`
