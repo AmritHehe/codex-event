@@ -3,8 +3,14 @@ import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { ApiError } from "./http";
 
-/** Server-paid AI: Vercel AI Gateway when configured, otherwise OpenAI directly with a cheap model. */
+/**
+ * Server-paid AI. Fast jobs (copy, chat edits, research summaries) run on Cerebras (gpt-oss-120b) when configured;
+ * films use AI Gateway, else OpenAI gpt-5.4.
+ */
 function model(quality: "fast" | "high" = "fast"): LanguageModel {
+  if (quality === "fast" && process.env.CEREBRAS_API_KEY) {
+    return createOpenAI({ name: "cerebras", baseURL: "https://api.cerebras.ai/v1", apiKey: process.env.CEREBRAS_API_KEY }).chat(process.env.CEREBRAS_MODEL || "gpt-oss-120b");
+  }
   if (process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN) return process.env.AI_MODEL || "anthropic/claude-sonnet-5.5";
   if (process.env.OPENAI_API_KEY) return createOpenAI({ apiKey: process.env.OPENAI_API_KEY })(quality === "high" ? process.env.OPENAI_FILM_MODEL || "gpt-5.4" : process.env.OPENAI_MODEL || "gpt-5.4-mini");
   throw new ApiError(503, "AI generation is not configured. Set AI_GATEWAY_API_KEY or OPENAI_API_KEY on the server.");
@@ -24,7 +30,7 @@ export async function structured<T>(schema: z.ZodType<T>, system: string, data: 
     maxRetries: 1,
     abortSignal: signal,
     // OpenAI strict mode forbids optional fields; our zod parse below still validates everything.
-    providerOptions: { openai: { strictJsonSchema: false } },
+    providerOptions: { openai: { strictJsonSchema: false }, cerebras: { strictJsonSchema: false } },
   });
   return schema.parse(output);
 }
