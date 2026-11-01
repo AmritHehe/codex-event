@@ -88,6 +88,6 @@ Run: `pnpm dev` (Next) + `pnpm render-server` (Node). Remotion Studio: `pnpm stu
 - [ ] GitHub release/changelog → "what's new" video
 
 ### Phase 8 — Demo polish
-- [ ] Landing page + pitch
+- [x] Landing page + pitch (live engine hero, bento, channels, agents)
 - [ ] Deploy web to Vercel; render server local/remote
 - [ ] Demo script: judge's URL → video in 60s → chat edit → post live

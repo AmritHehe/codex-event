@@ -68,3 +68,21 @@ input[type="color"]::-webkit-color-swatch {
     transform: none;
   }
 }
+
+/* Landing: logo marquee. Pauses on hover, static for reduced motion. */
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  animation: marquee 48s linear infinite;
+}
+.marquee:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    animation: none;
+  }
+}
