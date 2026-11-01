@@ -1,96 +1,145 @@
 "use client";
 
-import { ArrowRightIcon } from "@phosphor-icons/react";
-import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
-import Link from "next/link";
-import { useRef } from "react";
-import { EASE, HeroStage } from "./client";
+import type { PlayerRef } from "@remotion/player";
+import { motion, useReducedMotion } from "motion/react";
+import { useCallback, useRef } from "react";
+import { sampleProject } from "@/video/sample";
+import { FPS, projectDuration, sceneStarts, TRANSITION_FRAMES } from "@/video/schema";
+import { EASE, HeroStage, LABEL, tc } from "./client";
+import { UrlForm } from "./Form";
 
-function Line({ children, delay }: { children: React.ReactNode; delay: number }) {
-  const reduce = useReducedMotion();
-  return (
-    <span className="block overflow-hidden pb-[0.06em]">
-      <motion.span
-        className="block"
-        initial={reduce ? false : { transform: "translateY(105%)" }}
-        animate={{ transform: "translateY(0%)" }}
-        transition={{ duration: 1, delay, ease: EASE }}
-      >
-        {children}
-      </motion.span>
-    </span>
-  );
-}
+const TOTAL = projectDuration(sampleProject);
+const STARTS = sceneStarts(sampleProject);
+const SEGMENTS = sampleProject.scenes.map((s, i) => ({ id: s.id, name: s.name, from: STARTS[i], to: STARTS[i + 1] ?? TOTAL }));
 
-/** A marker swipes across the word, then the word flips to white on top of it. */
-function Marker({ children }: { children: string }) {
-  const reduce = useReducedMotion();
-  return (
-    <span className="relative isolate inline-block px-[0.06em]">
-      <motion.span
-        aria-hidden
-        className="absolute inset-x-0 top-[0.14em] bottom-[0.02em] -z-10 origin-left rounded-[0.14em] bg-accent"
-        initial={reduce ? false : { transform: "scaleX(0)" }}
-        animate={{ transform: "scaleX(1)" }}
-        transition={{ duration: 0.75, delay: 0.95, ease: [0.77, 0, 0.175, 1] }}
-      />
-      <motion.span initial={reduce ? false : { color: "#18181b" }} animate={{ color: "#ffffff" }} transition={{ duration: 0.2, delay: 1.25 }}>
-        {children}
-      </motion.span>
-    </span>
-  );
-}
-
-const fadeUp = (delay: number) => ({
+// Same initial state on server and client (no hydration mismatch); reduced motion just skips the tween.
+const fadeUp = (delay: number, reduce: boolean | null) => ({
   initial: { opacity: 0, transform: "translateY(12px)" },
   animate: { opacity: 1, transform: "translateY(0px)" },
-  transition: { duration: 0.8, delay, ease: EASE },
+  transition: reduce ? { duration: 0 } : { duration: 0.9, delay, ease: EASE },
 });
 
-export function Hero({ channels }: { channels: number }) {
-  const stage = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-  // The stage lies back like a screen on a desk and stands up as you scroll into it.
-  const { scrollYProgress } = useScroll({ target: stage, offset: ["start end", "center center"] });
-  const rotateX = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [28, 0]);
-  const scale = useTransform(scrollYProgress, [0, 1], reduce ? [1, 1] : [0.86, 1]);
-  const radius = useTransform(scrollYProgress, [0, 1], [36, 20]);
+/** Program monitor: the real engine playing the sample project, with its own timecode and scene track. */
+function Monitor() {
+  const player = useRef<PlayerRef | null>(null);
+  const tcOut = useRef<HTMLSpanElement>(null);
+  const head = useRef<HTMLDivElement>(null);
+
+  const attach = useCallback((p: PlayerRef | null) => {
+    player.current = p;
+    if (!p) return;
+    const on = ({ detail }: { detail: { frame: number } }) => {
+      if (tcOut.current) tcOut.current.textContent = tc(detail.frame);
+      if (head.current) head.current.style.transform = `translateX(${(detail.frame / (TOTAL - 1)) * 100}%)`;
+    };
+    p.addEventListener("frameupdate", on);
+    return () => p.removeEventListener("frameupdate", on);
+  }, []);
+
+  const seek = (i: number) => {
+    player.current?.seekTo(SEGMENTS[i].from + (i > 0 ? TRANSITION_FRAMES : 0));
+    player.current?.play();
+  };
 
   return (
-    <section className="px-4 pt-32 md:px-8 md:pt-40">
-      <div className="mx-auto max-w-[1320px]">
-        <h1 className="font-display text-[clamp(44px,8.2vw,124px)] leading-[0.94] font-bold tracking-[-0.045em]">
-          <Line delay={0.05}>Building is solved.</Line>
-          <Line delay={0.17}>
-            <Marker>Distribution</Marker> isn&apos;t.
-          </Line>
-        </h1>
-        <div className="mt-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <motion.p {...(reduce ? {} : fadeUp(0.55))} className="max-w-[40ch] text-[18px] leading-relaxed text-muted">
-            Shipcast turns your product into launch videos, threads and memes, then gets them in front of people on {channels} channels.
-          </motion.p>
-          <motion.div {...(reduce ? {} : fadeUp(0.65))} className="flex shrink-0 gap-3">
-            <Link href="/studio" className="press group inline-flex h-12 items-center gap-2 rounded-full bg-ink pr-2 pl-6 text-[15px] font-medium text-white">
-              Open Studio
-              <span className="grid size-8 place-items-center rounded-full bg-white/15 transition-transform duration-300 ease-[var(--ease-out)] group-hover:translate-x-0.5">
-                <ArrowRightIcon size={15} weight="bold" />
-              </span>
-            </Link>
-            <Link href="/distribution" className="press inline-flex h-12 items-center rounded-full px-6 text-[15px] font-medium ring-1 ring-ink/15 hover:bg-white">
-              See the channels
-            </Link>
-          </motion.div>
+    <figure className="overflow-hidden rounded-[10px] border border-line bg-panel">
+      <figcaption className={`flex h-9 items-center justify-between gap-4 border-b border-line px-3 ${LABEL}`}>
+        <span className="flex min-w-0 gap-3">
+          <span className="text-accent">PGM</span>
+          <span className="truncate">{sampleProject.name}</span>
+        </span>
+        <span className="flex gap-3 tabular-nums">
+          <span className="max-sm:hidden">
+            1920 × 1080 · {FPS} fps
+          </span>
+          <span ref={tcOut} className="text-ink">
+            {tc(0)}
+          </span>
+        </span>
+      </figcaption>
+      <div className="aspect-video bg-canvas">
+        <HeroStage playerRef={attach} />
+      </div>
+      <div className="relative flex h-9 border-t border-line">
+        {SEGMENTS.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => seek(i)}
+            style={{ flexGrow: s.to - s.from }}
+            className="basis-0 truncate border-l border-line px-2 text-left font-mono text-[10px] tracking-[0.08em] text-muted uppercase transition-colors first:border-l-0 hover:bg-hover hover:text-ink"
+            aria-label={`Play scene ${i + 1}: ${s.name}`}
+          >
+            <span className="text-faint">{String(i + 1).padStart(2, "0")}</span> <span className="max-sm:hidden">{s.name}</span>
+          </button>
+        ))}
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-px left-0">
+          <div ref={head} className="absolute inset-0">
+            <span className="absolute inset-y-0 left-0 w-px bg-accent" />
+          </div>
         </div>
       </div>
+    </figure>
+  );
+}
 
-      <div ref={stage} className="mx-auto mt-16 max-w-[1320px] [perspective:1600px]">
-        <motion.div
-          {...(reduce ? {} : fadeUp(0.8))}
-          style={{ rotateX, scale, borderRadius: radius, transformOrigin: "50% 100%" }}
-          className="aspect-video overflow-hidden bg-white shadow-[0_60px_120px_-40px_rgb(232_80_28/0.35),0_30px_60px_-30px_rgb(24_24_27/0.3),0_0_0_1px_rgb(24_24_27/0.06)] will-change-transform"
-        >
-          <HeroStage />
+export function Hero({ channels, agents }: { channels: number; agents: number }) {
+  const reduce = useReducedMotion();
+  const anim = (delay: number) => fadeUp(delay, reduce);
+
+  return (
+    <section id="hook" data-scene="Hook" className="px-4 pt-[76px] md:px-8 md:pt-[88px]">
+      <div className="mx-auto max-w-[1376px]">
+        <motion.div {...anim(0)} className={`flex justify-between gap-4 border-b border-line pb-3 ${LABEL}`}>
+          <span className="max-sm:hidden">Launch videos and distribution</span>
+          <span className="tabular-nums">
+            {channels} channels · {agents} agents
+          </span>
         </motion.div>
+
+        {/* A playhead scrubs across the headline and reveals it. */}
+        <h1 className="relative mt-6 w-fit text-[clamp(52px,11.6vw,168px)] leading-[0.9] font-semibold tracking-[-0.058em] md:mt-8">
+          <motion.span
+            className="block pr-[0.04em] pb-[0.06em]"
+            initial={{ clipPath: "inset(0 100% 0 0)" }}
+            animate={{ clipPath: "inset(0 0% 0 0)" }}
+            transition={reduce ? { duration: 0 } : { duration: 1.3, delay: 0.15, ease: EASE }}
+          >
+            <span className="block text-muted">Building is solved.</span>
+            <span className="block">Distribution isn&apos;t.</span>
+          </motion.span>
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-0 w-full"
+            initial={{ transform: "translateX(0%)", opacity: 1 }}
+            animate={{ transform: "translateX(100%)", opacity: 0 }}
+            transition={
+              reduce ? { duration: 0 } : { transform: { duration: 1.3, delay: 0.15, ease: EASE }, opacity: { duration: 0.3, delay: 1.35 } }
+            }
+          >
+            <span className="absolute -inset-y-3 left-0 w-px bg-accent" />
+            <span className="absolute -top-3 -left-[3px] h-[6px] w-[7px] bg-accent" />
+          </motion.span>
+        </h1>
+
+        <div className="mt-10 grid gap-x-10 gap-y-12 pb-24 md:mt-12 md:grid-cols-12 md:pb-32">
+          <motion.div {...anim(0.7)} className="flex flex-col gap-8 md:col-span-5 lg:col-span-4">
+            <p className="max-w-[40ch] text-[17px] leading-[1.55] text-muted md:text-[18px]">
+              Shipcast turns your product page into a launch video you can edit layer by layer, cut for every feed, then gets it in front of
+              people on {channels} channels.
+            </p>
+            <UrlForm />
+          </motion.div>
+          <motion.div {...anim(0.85)} className="md:col-span-7 lg:col-span-8">
+            <Monitor />
+            <p className={`mt-3 flex justify-between gap-4 ${LABEL}`}>
+              <span>Live engine, not a recording</span>
+              <span className="tabular-nums">
+                {SEGMENTS.length} scenes<span className="max-sm:hidden"> · {tc(TOTAL)}</span>
+              </span>
+            </p>
+          </motion.div>
+        </div>
       </div>
     </section>
   );

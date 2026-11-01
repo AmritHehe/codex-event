@@ -1,8 +1,9 @@
 "use client";
 
 // Remotion-backed pieces of the landing page. Loaded client-only via ./client.
-import { Player, Thumbnail } from "@remotion/player";
+import { Player, Thumbnail, type PlayerRef } from "@remotion/player";
 import { useReducedMotion } from "motion/react";
+import type { Ref } from "react";
 import { focusFrame } from "@/editor/store";
 import { LaunchVideo } from "@/video/LaunchVideo";
 import { sampleProject } from "@/video/sample";
@@ -11,10 +12,11 @@ import { THEME_PRESETS } from "@/video/themes";
 
 const total = projectDuration(sampleProject);
 
-export function HeroStage() {
+export function HeroStage({ playerRef }: { playerRef?: Ref<PlayerRef> }) {
   const reduce = useReducedMotion();
   return (
     <Player
+      ref={playerRef}
       component={LaunchVideo}
       inputProps={{ project: sampleProject }}
       durationInFrames={total}
@@ -44,21 +46,6 @@ export function ReflowStage({ w, h, theme }: { w: number; h: number; theme: numb
       durationInFrames={total}
       fps={FPS}
       frameToDisplay={productFrame}
-      style={{ width: "100%", height: "100%" }}
-    />
-  );
-}
-
-export function CardThumb() {
-  return (
-    <Thumbnail
-      component={LaunchVideo}
-      inputProps={{ project: sampleProject }}
-      compositionWidth={1920}
-      compositionHeight={1080}
-      durationInFrames={total}
-      fps={FPS}
-      frameToDisplay={focusFrame(sampleProject, "cta", "c2")}
       style={{ width: "100%", height: "100%" }}
     />
   );

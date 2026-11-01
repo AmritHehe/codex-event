@@ -1,0 +1,11 @@
+/* Ruler ticks: a minor tick every second of the 60 s page timeline, a major one every 5 s. */
+.ticks {
+  background:
+    repeating-linear-gradient(90deg, var(--color-muted) 0 1px, transparent 1px calc(100% / 12)) bottom left / 100% 9px no-repeat,
+    repeating-linear-gradient(90deg, var(--color-faint) 0 1px, transparent 1px calc(100% / 60)) bottom left / 100% 4px no-repeat;
+}
+
+/* Fine ticks for small tracks (form progress, scene strips). */
+.fine {
+  background: repeating-linear-gradient(90deg, var(--color-line) 0 1px, transparent 1px 8px) bottom left / 100% 6px no-repeat;
+}
