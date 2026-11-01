@@ -123,6 +123,9 @@ export type Scene = z.infer<typeof sceneSchema>;
 export type Theme = z.infer<typeof themeSchema>;
 export type Project = z.infer<typeof projectSchema>;
 
+/** Default entrance frame for the i-th visible layer of a scene (staggered). */
+export const autoDelay = (i: number) => 6 + i * 8;
+
 const hasTransition = (s: Scene, i: number) => i > 0 && s.transition !== "none";
 
 /** Total frames: scene lengths minus transition overlaps. */

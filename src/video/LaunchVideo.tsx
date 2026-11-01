@@ -7,7 +7,7 @@ import type { CSSProperties } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { LayerView, mix, unit, type Box } from "./layers";
 import { font } from "./fonts";
-import { TRANSITION_FRAMES, type Project, type Scene, type Theme } from "./schema";
+import { autoDelay, TRANSITION_FRAMES, type Project, type Scene, type Theme } from "./schema";
 
 function Background({ kind, theme }: { kind: Scene["background"]; theme: Theme }) {
   const frame = useCurrentFrame();
@@ -64,7 +64,7 @@ export function SceneView({ scene, theme }: { scene: Scene; theme: Theme }) {
   const pad = 7 * u;
   const split = scene.layout === "split" && width > height;
   const visible = scene.layers.filter((l) => !l.hidden);
-  const delays = new Map(visible.map((l, i) => [l.id, l.delay ?? 6 + i * 8]));
+  const delays = new Map(visible.map((l, i) => [l.id, l.delay ?? autoDelay(i)]));
 
   const inner = { w: width - pad * 2, h: height - pad * 2 };
   const textBox: Box = { u, w: split ? inner.w * 0.42 : inner.w * 0.9, h: inner.h, align: split ? "left" : "center" };
