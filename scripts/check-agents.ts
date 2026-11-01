@@ -45,7 +45,7 @@ let server: Server;
 let origin: string;
 async function dispatch(request: Request, path: string) {
   const project = /^\/api\/projects\/([^/]+)$/.exec(path);
-  if (project) return projectRoute.GET(request, { params: Promise.resolve({ id: decodeURIComponent(project[1]) }) });
+  if (project) return projectRoute[request.method === "PUT" ? "PUT" : "GET"](request, { params: Promise.resolve({ id: decodeURIComponent(project[1]) }) });
   const routes: Record<string, Record<string, ((r: Request, c: never) => Promise<Response>) | undefined>> = {
     "/mcp": mcpRoute as never,
     "/api/workspace": workspaceRoute as never,
@@ -363,6 +363,20 @@ test("end to end: an agent builds a film over MCP while the web app watches", as
 
   await client.close();
   await stream.close();
+});
+
+test("Studio edits PUT back to the project are what the agent's get_project returns", async () => {
+  const { token, cookie } = await newWorkspace();
+  const client = new Client({ name: "check-agents", version: "1" });
+  await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`), { requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+  const { projectId } = data(await client.callTool({ name: "create_project", arguments: { name: "Acme", url: "https://acme.dev", theme: sampleProject.theme } }));
+  const put = (c: string, body: unknown) => fetch(`${origin}/api/projects/${projectId}`, { method: "PUT", headers: { "content-type": "application/json", cookie: c }, body: JSON.stringify(body) });
+  const edited = { ...sampleProject, id: projectId, name: "Edited by hand" };
+  assert.equal((await put(cookie, { project: edited })).status, 200);
+  assert.equal(data(await client.callTool({ name: "get_project", arguments: { projectId } })).project.name, "Edited by hand");
+  assert.equal((await put(cookie, { project: { ...edited, scenes: [] } })).status, 400);
+  assert.equal((await put((await newWorkspace()).cookie, { project: edited })).status, 404);
+  await client.close();
 });
 
 test("2026-07-28 clients (per-request clientInfo envelope) are recorded as connections too", async () => {
