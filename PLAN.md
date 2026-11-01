@@ -42,13 +42,13 @@ Run: `pnpm dev` (Next) + `pnpm render-server` (Node). Remotion Studio: `pnpm stu
 - [x] Aspect-ratio aware layout (9:16 / 1:1 / 16:9)
 - [x] Player preview page in Next
 
-### Phase 2 — Editor
-- [ ] Editor shell: scenes list · player · inspector
-- [ ] Layer panel: select, reorder, hide, delete, add layer
-- [ ] Inspector: edit text, colors, fonts, timing, animation
-- [ ] Timeline: scene durations, scrub, click-to-seek
-- [ ] Theme panel (brand colors/fonts) + aspect switcher
-- [ ] Undo/redo + autosave to localStorage
+### Phase 2 — Editor ✅
+- [x] Editor shell: scenes list · player · inspector
+- [x] Layer panel: select, reorder, hide, delete, add layer
+- [x] Inspector: edit text, colors, fonts, timing, animation
+- [x] Timeline: scene durations, scrub, click-to-seek
+- [x] Theme panel (brand colors/fonts) + aspect switcher
+- [x] Undo/redo + autosave to localStorage
 
 ### Phase 3 — AI generation
 - [ ] Firecrawl integration: URL → content + screenshot + brand
