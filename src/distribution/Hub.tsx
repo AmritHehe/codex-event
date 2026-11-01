@@ -1,11 +1,12 @@
 "use client";
 
-import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+import { CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { AGENTS, type AgentId } from "./agents";
 import { ASSET_LABEL, AUTOMATION, CATEGORIES, CHANNELS, type Automation, type CategoryId, type Channel } from "./channels";
 import { AgentGlyph, ChannelLogo } from "./icons";
+import { KitSheet, Tick, useKit } from "./Kit";
 
 const EASE_UI = [0.23, 1, 0.32, 1] as const;
 const EASE_ENTER = [0.16, 1, 0.3, 1] as const;
@@ -18,8 +19,8 @@ const AGENT_NO = Object.fromEntries(AGENTS.map((a, i) => [a.id, pad(i + 1)])) as
 const CATEGORY = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])) as Record<CategoryId, string>;
 const short = (name: string) => name.replace(/ agent$/, "");
 
-export const mono = "font-mono text-[11px] uppercase tracking-[0.08em] tabular-nums";
-export const label = `${mono} text-muted`;
+const mono = "font-mono text-[11px] uppercase tracking-[0.08em] tabular-nums";
+const label = `${mono} text-muted`;
 const note = "font-mono text-[11px] leading-relaxed text-muted";
 
 type Filters = { category: CategoryId | null; automation: Automation | null; agent: AgentId | null; q: string };
@@ -82,10 +83,15 @@ function IndexButton({ on, dim, onClick, children }: { on: boolean; dim: boolean
 
 const strip = "-mx-4 flex overflow-x-auto px-4 [scrollbar-width:none] md:-mx-10 md:px-10 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0";
 
-function Row({ c, onOpen }: { c: Channel; onOpen: (c: Channel, keyboard: boolean) => void }) {
+function Row({ c, onOpen, picked, onPick }: { c: Channel; onOpen: (c: Channel, keyboard: boolean) => void; picked: boolean; onPick: () => void }) {
   const assets = c.assets.map((a) => ASSET_LABEL[a]);
   return (
-    <li className="relative -mx-2 grid grid-cols-[24px_minmax(0,1fr)] items-start gap-x-3 border-b border-line px-2 py-4 hover:bg-panel md:grid-cols-[36px_24px_minmax(0,1fr)_150px_124px] md:items-center md:gap-x-4 xl:grid-cols-[36px_24px_minmax(0,1fr)_150px_190px_124px]">
+    <li
+      className={`relative -mx-2 grid grid-cols-[16px_20px_minmax(0,1fr)] items-start gap-x-3 border-b border-line px-2 py-4 md:grid-cols-[16px_36px_20px_minmax(0,1fr)_150px_124px] md:items-center md:gap-x-4 xl:grid-cols-[16px_36px_20px_minmax(0,1fr)_150px_190px_124px] ${picked ? "bg-accent-soft" : "hover:bg-panel"}`}
+    >
+      <span className="pt-0.5 md:pt-0">
+        <Tick checked={picked} onChange={onPick} name={c.name} />
+      </span>
       <span className={`${label} hidden md:block`}>{CH_NO[c.id]}</span>
       <span className="pt-0.5 md:pt-0">
         <ChannelLogo c={c} size={18} />
@@ -189,7 +195,7 @@ function Fact({ name, children }: { name: string; children: React.ReactNode }) {
   );
 }
 
-function ChannelSheet({ c }: { c: Channel }) {
+function ChannelSheet({ c, picked, onPick }: { c: Channel; picked: boolean; onPick: () => void }) {
   const agent = AGENTS.find((a) => a.id === c.agent)!;
   return (
     <div className="flex flex-col px-6 pt-6 pb-10 sm:px-8">
@@ -201,6 +207,14 @@ function ChannelSheet({ c }: { c: Channel }) {
       </div>
       <h2 className="mt-4 text-[clamp(32px,6vw,44px)] leading-[0.95] font-semibold tracking-[-0.045em] text-balance">{c.name}</h2>
       <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.55] text-muted">{c.what}</p>
+      <button
+        onClick={onPick}
+        aria-pressed={picked}
+        className={`press mt-6 flex h-10 items-center gap-2.5 self-start rounded-md border px-4 text-[14px] font-medium ${picked ? "border-accent bg-accent-soft text-ink" : "border-ink text-ink hover:bg-ink hover:text-canvas"}`}
+      >
+        {picked ? <CheckIcon size={15} weight="bold" className="text-accent" /> : <PlusIcon size={15} />}
+        {picked ? "In your kit" : "Add to kit"}
+      </button>
       <dl className="mt-8 border-b border-line">
         <Fact name="Automation">
           <Meter a={c.automation} />
@@ -232,7 +246,9 @@ function ChannelSheet({ c }: { c: Channel }) {
 
 export function Hub() {
   const [f, setF] = useState<Filters>(NO_FILTERS);
-  const [open, setOpen] = useState<Channel | null>(null);
+  const [open, setOpen] = useState<Channel | "kit" | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
+  const kit = useKit();
   const [instant, setInstant] = useState(false);
   const search = useRef<HTMLInputElement>(null);
   const set = (patch: Partial<Filters>) => setF((prev) => ({ ...prev, ...patch }));
@@ -242,9 +258,15 @@ export function Hub() {
   const filtered = f.category || f.automation || f.agent || f.q;
   const count = (a: Automation) => CHANNELS.filter((c) => c.automation === a).length;
 
-  const openChannel = (c: Channel, keyboard: boolean) => {
+  const show = (panel: Channel | "kit", keyboard: boolean) => {
     setInstant(keyboard);
-    setOpen(c);
+    setOpen(panel);
+  };
+  // Kept in catalog order so the kit reads like the index.
+  const pick = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : CHANNELS.map((c) => c.id).filter((x) => x === id || p.includes(x))));
+  const generate = (keyboard: boolean) => {
+    show("kit", keyboard);
+    if (kit.status === "idle") kit.generate(picked);
   };
   const close = (keyboard: boolean) => {
     setInstant(keyboard);
@@ -368,7 +390,7 @@ export function Hub() {
           </aside>
 
           <div className="min-w-0">
-            <div className="sticky top-0 z-10 -mx-4 bg-canvas/90 px-4 pt-4 pb-3 backdrop-blur-md md:-mx-10 md:px-10 lg:mx-0 lg:px-0">
+            <div className="sticky top-0 z-20 -mx-4 bg-canvas px-4 pt-4 pb-3 md:-mx-10 md:px-10 lg:mx-0 lg:px-0">
               <label className="flex items-center gap-3 border-b border-ink pb-3 focus-within:border-accent">
                 <MagnifyingGlassIcon size={20} className="shrink-0 text-muted" />
                 <span className="sr-only">Search channels</span>
@@ -429,7 +451,7 @@ export function Hub() {
                     </header>
                     <ul>
                       {rows.map((c) => (
-                        <Row key={c.id} c={c} onOpen={openChannel} />
+                        <Row key={c.id} c={c} onOpen={show} picked={picked.includes(c.id)} onPick={() => pick(c.id)} />
                       ))}
                     </ul>
                   </section>
@@ -438,12 +460,45 @@ export function Hub() {
             )}
           </div>
         </div>
+
+        <div className="pointer-events-none sticky bottom-5 z-20 mt-12 flex justify-center">
+          <AnimatePresence>
+            {picked.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 16 }}
+                transition={{ duration: 0.2, ease: EASE_UI }}
+                className="pointer-events-auto flex h-14 w-full max-w-[560px] items-center gap-4 rounded-[10px] bg-ink pr-2 pl-4 text-canvas shadow-pop"
+              >
+                <span className={`${mono} shrink-0`}>
+                  <span className="text-accent">{pad(picked.length)}</span> in kit
+                </span>
+                <span aria-hidden className="hidden min-w-0 items-center gap-2.5 overflow-hidden text-canvas/70 sm:flex">
+                  {picked.slice(0, 7).map((id) => (
+                    <ChannelLogo key={id} c={CHANNELS.find((c) => c.id === id)!} size={14} />
+                  ))}
+                </span>
+                <button onClick={() => setPicked([])} className={`${mono} ml-auto text-canvas/60 transition-colors duration-150 hover:text-canvas`}>
+                  Clear
+                </button>
+                <button onClick={(e) => generate(e.detail === 0)} className="press h-10 shrink-0 rounded-md bg-canvas px-4 text-[14px] font-medium text-ink">
+                  {kit.status === "idle" ? "Generate posts" : "Open kit"}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       <AnimatePresence custom={instant}>
         {open && (
-          <Drawer key={open.id} title={open.name} instant={instant} onClose={close}>
-            <ChannelSheet c={open} />
+          <Drawer key={open === "kit" ? "kit" : open.id} title={open === "kit" ? "Launch kit" : open.name} instant={instant} onClose={close}>
+            {open === "kit" ? (
+              <KitSheet picked={picked} kit={kit} onRemove={pick} />
+            ) : (
+              <ChannelSheet c={open} picked={picked.includes(open.id)} onPick={() => pick(open.id)} />
+            )}
           </Drawer>
         )}
       </AnimatePresence>
