@@ -5,6 +5,7 @@ import { Agents } from "@/landing/Agents";
 import { Finale } from "@/landing/Finale";
 import { Hero } from "@/landing/Hero";
 import { Hud } from "@/landing/Hud";
+import { Memes } from "@/landing/Memes";
 import { Reflow } from "@/landing/Reflow";
 import { Sorter } from "@/landing/Sorter";
 
@@ -22,6 +23,7 @@ export default function Landing() {
         <Hero channels={CHANNELS.length} agents={AGENTS.length} />
         <Reflow />
         <Sorter />
+        <Memes />
         <Agents />
         <Finale channels={CHANNELS.length} />
       </main>
