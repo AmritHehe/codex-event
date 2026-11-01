@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "render-server": "tsx server/render.ts",
+    "check:render": "tsx --test scripts/check-render.ts",
+    "check:render:smoke": "tsx scripts/check-render-smoke.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "studio": "remotion studio src/video/index.ts",
-    "render-server": "tsx server/render.ts",
-    "check:render": "tsx --test scripts/check-render.ts",
-    "check:render:smoke": "tsx scripts/check-render-smoke.ts",
     "check:video": "tsx scripts/check-video.ts"
   },
   "dependencies": {
