@@ -212,8 +212,8 @@ function Steps({ at }: { at: Step }) {
 function Count({ n, limit }: { n: number; limit: number }) {
   const over = n > limit;
   return (
-    <span className="flex items-center gap-3">
-      <span aria-hidden className="relative block h-px w-16 bg-line">
+    <span className="flex shrink-0 items-center gap-3 whitespace-nowrap">
+      <span aria-hidden className="relative block h-px w-10 bg-line sm:w-16">
         <span className={`absolute inset-y-0 left-0 ${over ? "bg-accent" : "bg-ink"}`} style={{ width: `${Math.min(100, (n / limit) * 100)}%` }} />
       </span>
       <span className={`${mono} ${over ? "text-accent" : "text-muted"}`}>
@@ -344,7 +344,7 @@ export function PublishSheet({
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-3">
               <label htmlFor="publish-text" className={label}>
-                Post text{draft !== undefined && " · from your kit"}
+                Post text
               </label>
               <Count n={length} limit={t.limit} />
             </div>
@@ -357,6 +357,7 @@ export function PublishSheet({
               style={{ outline: "none" }}
               className={`${field} min-h-[160px] resize-none [field-sizing:content]`}
             />
+            {draft !== undefined && <span className={note}>This is your kit draft. Edits here update it in the kit too.</span>}
             {over && (
               <div id="publish-over" className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <p className="text-[13px] text-ink">
