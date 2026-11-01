@@ -21,6 +21,8 @@ const request = (data: unknown, key = token) => new Request("http://localhost/ap
 test("validation excludes draft-only destinations and invalid media/schedule combinations", () => {
   for (const channel of ["reddit", "product-hunt", "hacker-news"]) assert.throws(() => input({ channel }));
   assert.throws(() => input({ channel: "x", mediaUrl: "https://example.com/video.mp4" }));
+  assert.throws(() => input({ channel: "x", renderJobId: randomUUID() }));
+  assert.throws(() => input({ channel: "tiktok", renderJobId: randomUUID(), mediaUrl: "https://example.com/video.mp4" }));
   assert.throws(() => input({ channel: "threads", scheduleAt: "2030-01-01T00:00:00Z" }));
   assert.throws(() => input({ channel: "youtube-shorts" }));
   assert.throws(() => input({ channel: "pinterest", mediaUrl: "https://example.com/photo.png" }));
@@ -110,6 +112,40 @@ test("concurrent and interrupted attempts fail closed rather than duplicating po
     assert.equal((await handler(request(other))).status, 409); assert.equal(calls, 1);
     await writeFile(join(dir, "posts.json"), "corrupt");
     assert.equal((await handler(request(input()))).status, 503); assert.equal(calls, 1);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test("render publishing authenticates first, resolves media and recovers receipts without the render server", async () => {
+  process.env.DISTRIBUTION_TOKEN = token;
+  const dir = await mkdtemp(join(tmpdir(), "shipcast-render-publish-test-"));
+  let resolutions = 0;
+  let publications = 0;
+  const data = input({ channel: "tiktok", renderJobId: randomUUID() });
+  const handler = createPublishHandler({
+    ledger: new PublicationLedger(dir), requireConnection: () => {},
+    resolveRenderMedia: async (id) => {
+      assert.equal(id, data.renderJobId);
+      resolutions++;
+      if (resolutions > 1) throw new Error("Render server restarted");
+      return "https://example.com/completed.mp4";
+    },
+    publish: async (resolved) => {
+      publications++;
+      assert.equal(resolved.mediaUrl, "https://example.com/completed.mp4");
+      return { requestId: resolved.requestId, channel: resolved.channel, providerId: "uploaded-video", status: "submitted" };
+    },
+  });
+  try {
+    assert.equal((await handler(request(data, "wrong-key"))).status, 401);
+    assert.equal(resolutions, 0);
+    const first = await handler(request(data));
+    assert.equal(first.status, 200);
+    const retry = await handler(request(data));
+    assert.equal(retry.status, 200);
+    assert.deepEqual(await retry.json(), await first.json());
+    assert.equal(resolutions, 1);
+    assert.equal(publications, 1);
+    assert.equal((await handler(request({ ...data, text: "Changed draft" }))).status, 409);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

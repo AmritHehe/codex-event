@@ -85,9 +85,18 @@ test("generation uses the scraped screenshot, including when the model omits med
 test("generation drops stats whose number the sources never state", async () => {
   const stats = (markdown: string) => withSourcedStats(sampleProject, markdown).scenes.flatMap((s) => s.layers).filter((l) => l.type === "stat");
   assert.equal(stats("Launch videos in 600 seconds").length, 0, "60 is not 600");
+  assert.equal(stats("Launch videos in 60.5 seconds").length, 0, "60 is not 60.5");
+  assert.equal(stats("A change of -60 seconds").length, 0, "60 is not -60");
   assert.equal(stats("From URL to film in 60 seconds").length, 1);
+  assert.equal(stats("From URL to film in 60. Next step: export.").length, 1);
   const result = await generate(page.url, signal, deps(film(sampleProject)));
   assert.ok(!result.project.scenes.some((s) => s.id === "stat"), "unsourced stat scene removed");
+});
+
+test("generation never restores unsupported claims when every scene is removed", () => {
+  const onlyStats = { ...sampleProject, scenes: sampleProject.scenes.filter((s) => s.id === "stat") };
+  assert.ok(onlyStats.scenes.length);
+  assert.throws(() => withSourcedStats(onlyStats, "No numeric evidence."), ApiError);
 });
 
 test("targeted edits preserve untouched IDs and objects without mutating input", () => {
