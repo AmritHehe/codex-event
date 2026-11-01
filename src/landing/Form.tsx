@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { generateRequest, generateResponse, postJson } from "@/lib/contracts";
-import { FPS } from "@/video/schema";
+import { FPS, type Project } from "@/video/schema";
 import { LABEL, tc } from "./client";
 import css from "./landing.module.css";
 
@@ -51,8 +51,8 @@ function Generating() {
   );
 }
 
-/** F3.1: product URL in, first draft out, then straight into the Studio. */
-export function UrlForm() {
+/** F3.1: product URL in, first draft out. Landing hands it to the Studio; inside the Studio, `onDone` loads it directly. */
+export function UrlForm({ onDone, compact = false }: { onDone?: (project: Project) => void; compact?: boolean } = {}) {
   const id = useId();
   const router = useRouter();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -69,6 +69,11 @@ export function UrlForm() {
     setStatus({ kind: "loading" });
     try {
       const result = await postJson("/api/generate", { url }, generateResponse);
+      if (onDone) {
+        setStatus({ kind: "idle" });
+        onDone(result.project);
+        return;
+      }
       try {
         localStorage.setItem("shipcast:project", JSON.stringify(result.project));
       } catch {
@@ -98,12 +103,12 @@ export function UrlForm() {
             aria-invalid={status.kind === "error"}
             aria-describedby={status.kind === "error" ? `${id}-err` : undefined}
             onChange={() => status.kind === "error" && setStatus({ kind: "idle" })}
-            className="h-12 w-full min-w-0 rounded-[6px] border border-line bg-panel px-3.5 text-[16px] transition-colors outline-none placeholder:text-faint hover:border-faint focus:border-ink disabled:opacity-60 aria-invalid:border-accent"
+            className={`${compact ? "h-9 text-[14px]" : "h-12 text-[16px]"} w-full min-w-0 rounded-[6px] border border-line bg-panel px-3.5 transition-colors outline-none placeholder:text-faint hover:border-faint focus:border-ink disabled:opacity-60 aria-invalid:border-accent`}
           />
           <button
             type="submit"
             disabled={loading}
-            className="press group inline-flex h-12 items-center justify-center gap-2 rounded-[6px] bg-ink px-4 text-[15px] font-medium text-canvas disabled:opacity-60 md:px-5"
+            className={`${compact ? "h-9 text-[13px]" : "h-12 text-[15px]"} press group inline-flex items-center justify-center gap-2 rounded-[6px] bg-ink px-4 font-medium text-canvas disabled:opacity-60 md:px-5`}
           >
             {loading ? "Generating" : "Make the video"}
             <ArrowRightIcon size={15} weight="bold" className="transition-transform duration-200 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
@@ -117,6 +122,7 @@ export function UrlForm() {
           </p>
         )}
       </form>
+      {!compact && (
       <p className="mt-5 text-[14px] text-muted">
         No URL handy?{" "}
         <Link href="/studio" className="inline-flex items-center gap-1 font-medium text-ink underline decoration-line underline-offset-4 transition-colors hover:decoration-ink">
@@ -124,6 +130,7 @@ export function UrlForm() {
         </Link>{" "}
         with the sample launch video.
       </p>
+      )}
     </div>
   );
 }
