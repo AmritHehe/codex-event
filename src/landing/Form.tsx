@@ -52,7 +52,8 @@ function Generating() {
 }
 
 /** F3.1: product URL in, first draft out. Landing hands it to the Studio; inside the Studio, `onDone` loads it directly. */
-export function UrlForm({ onDone, compact = false }: { onDone?: (project: Project) => void; compact?: boolean } = {}) {
+/** `quiet`: secondary button when a stronger CTA sits above it (the hero's "Connect your Claude"). */
+export function UrlForm({ onDone, compact = false, quiet = false }: { onDone?: (project: Project) => void; compact?: boolean; quiet?: boolean } = {}) {
   const id = useId();
   const router = useRouter();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -108,7 +109,7 @@ export function UrlForm({ onDone, compact = false }: { onDone?: (project: Projec
           <button
             type="submit"
             disabled={loading}
-            className={`${compact ? "h-9 text-[13px]" : "h-12 text-[15px]"} press group inline-flex items-center justify-center gap-2 rounded-[6px] bg-ink px-4 font-medium text-canvas disabled:opacity-60 md:px-5`}
+            className={`${compact ? "h-9 text-[13px]" : "h-12 text-[15px]"} press group inline-flex items-center justify-center gap-2 rounded-[6px] px-4 font-medium disabled:opacity-60 md:px-5 ${quiet ? "border border-ink/80 text-ink hover:bg-ink hover:text-canvas" : "bg-ink text-canvas"}`}
           >
             {loading ? "Generating" : "Make the video"}
             <ArrowRightIcon size={15} weight="bold" className="transition-transform duration-200 ease-[var(--ease-out)] group-hover:translate-x-0.5" />

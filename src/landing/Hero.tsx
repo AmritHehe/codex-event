@@ -2,13 +2,17 @@
 
 import type { PlayerRef } from "@remotion/player";
 import { motion, useReducedMotion } from "motion/react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
+import Link from "next/link";
 import { useCallback, useRef } from "react";
+import { AGENT_CLIENTS, FREE_CREDITS } from "@/lib/agent-contracts";
 import { sampleProject } from "@/video/sample";
 import { FPS, projectDuration, sceneStarts, TRANSITION_FRAMES } from "@/video/schema";
 import { EASE, HeroStage, LABEL, tc } from "./client";
 import { UrlForm } from "./Form";
 
 const TOTAL = projectDuration(sampleProject);
+const AGENT_NAMES = new Intl.ListFormat("en", { type: "disjunction" }).format(AGENT_CLIENTS.map((c) => c.name));
 const STARTS = sceneStarts(sampleProject);
 const SEGMENTS = sampleProject.scenes.map((s, i) => ({ id: s.id, name: s.name, from: STARTS[i], to: STARTS[i + 1] ?? TOTAL }));
 
@@ -128,7 +132,24 @@ export function Hero({ channels, agents }: { channels: number; agents: number })
               Shipcast turns your product page into a launch video you can edit layer by layer, cut for every feed, then gets it in front of
               people on {channels} channels.
             </p>
-            <UrlForm />
+            <div>
+              <Link
+                href="/connect"
+                className="press group inline-flex h-12 items-center gap-2.5 rounded-[6px] bg-ink px-5 text-[16px] font-medium text-canvas hover:bg-ink/85"
+              >
+                Connect your Claude
+                <ArrowRightIcon size={16} weight="bold" className="transition-transform duration-200 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
+              </Link>
+              <p className="mt-3 max-w-[40ch] text-[14px] leading-[1.5] text-muted">
+                {AGENT_NAMES} builds the film on the plan you already pay for. You watch it land on the timeline.
+              </p>
+            </div>
+            <div id="no-agent" className="scroll-mt-24 border-t border-line pt-6">
+              <p className={`${LABEL} mb-4`}>
+                No agent? <span className="text-ink">{FREE_CREDITS} free credits</span>
+              </p>
+              <UrlForm quiet />
+            </div>
           </motion.div>
           <motion.div {...anim(0.85)} className="md:col-span-7 lg:col-span-8">
             <Monitor />
