@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { memeTemplate, templateResponse } from "@/lib/distribution-contracts";
 import { loadProject } from "./Kit";
-import { downloadMeme, memeSvg } from "./meme";
+import { captionable, downloadMeme, memeSvg } from "./meme";
 import { Alert, SheetHead, Segmented, Working, field, label, mono, note, pad, primary } from "./ui";
 
 type Template = z.infer<typeof memeTemplate>;
@@ -35,7 +35,7 @@ export function MemeSheet() {
     fetch("/api/distribution/templates", { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]) })
       .then(async (response) => {
         if (!response.ok) throw new Error("Popular templates are unavailable. Try again.");
-        const { templates } = templateResponse.parse(await response.json());
+        const templates = templateResponse.parse(await response.json()).templates.filter(captionable);
         setList({ status: "done", templates });
         setSelected((current) => (templates.some((t) => t.id === current) ? current : (templates[0]?.id ?? "")));
         setLayout((current) => (run ? current : layoutFor(templates[0])));
