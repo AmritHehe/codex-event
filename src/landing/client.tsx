@@ -1,33 +1,39 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { useMotionValue, useReducedMotion, useScroll, type MotionValue } from "motion/react";
 import dynamic from "next/dynamic";
+import { useEffect, useState, type RefObject } from "react";
 
-// Remotion renders client-only; skeletons reserve the same space so nothing shifts on load.
-const skeleton = (cls: string) =>
-  function Skeleton() {
-    return <div className={`animate-pulse rounded-2xl bg-line/60 ${cls}`} />;
-  };
+// Remotion renders client-only; the parent box reserves space, so nothing shifts when it mounts.
+const blank = () => <div className="h-full w-full animate-pulse bg-line/50" />;
+export const HeroStage = dynamic(() => import("./Live").then((m) => m.HeroStage), { ssr: false, loading: blank });
+export const ReflowStage = dynamic(() => import("./Live").then((m) => m.ReflowStage), { ssr: false, loading: blank });
+export const CardThumb = dynamic(() => import("./Live").then((m) => m.CardThumb), { ssr: false, loading: blank });
 
-export const HeroPlayer = dynamic(() => import("./Live").then((m) => m.HeroPlayer), {
-  ssr: false,
-  loading: skeleton("h-[min(500px,50vh,calc((100vw-32px)/1.778))] w-full"),
-});
-export const AspectStrip = dynamic(() => import("./Live").then((m) => m.AspectStrip), { ssr: false, loading: skeleton("h-48 w-full") });
-export const ThemeGrid = dynamic(() => import("./Live").then((m) => m.ThemeGrid), { ssr: false, loading: skeleton("aspect-video w-full") });
-export const CtaThumb = dynamic(() => import("./Live").then((m) => m.CtaThumb), { ssr: false, loading: skeleton("aspect-video w-full") });
+export const EASE = [0.16, 1, 0.3, 1] as const;
+export const easeOutCubic = (v: number) => 1 - Math.pow(1 - v, 3);
 
-export function Reveal({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      className={className}
-      initial={reduce ? false : { opacity: 0, transform: "translateY(16px)" }}
-      whileInView={{ opacity: 1, transform: "translateY(0px)" }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.6, delay, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
+/** Scroll progress through a pinned section; reduced motion jumps straight to the end state. */
+export function usePinProgress(ref: RefObject<HTMLElement | null>): MotionValue<number> {
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  const done = useMotionValue(1);
+  return useReducedMotion() ? done : scrollYProgress;
 }
+
+export function useSize(ref: RefObject<HTMLElement | null>) {
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setSize({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return size;
+}
+
+/** Deterministic 0..1 noise so scatter layouts match between renders. */
+export const rand = (i: number) => {
+  const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
