@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "studio": "remotion studio src/video/index.ts",
-    "check:video": "tsx scripts/check-video.ts"
+    "check:video": "tsx scripts/check-video.ts",
+    "check:ai": "tsx --test scripts/check-ai.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
