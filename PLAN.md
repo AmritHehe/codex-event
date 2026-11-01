@@ -138,7 +138,7 @@ Contract: `src/lib/agent-contracts.ts` (MCP tool schemas, workspace API, live ev
 5. Free credits (`FREE_CREDITS`) cover server-side humanised copy for users with no agent. Memes come from agents with image tools (Codex, Gemini) via `save_asset`.
 6. Posting via the Phase 5 publishers.
 
-**Backend (collaborator)**
+**Backend (us: Amrit + Claude, the MCP is the core of the demo)**
 - [ ] B10.1 Workspace store: anonymous workspace + random token (hash at rest), httpOnly cookie for web. File store in dev (`.data/`), Upstash Redis via Vercel Marketplace for deploy
 - [ ] B10.2 MCP server at `/mcp` (Streamable HTTP, `mcp-handler` + official SDK), Bearer token auth, tools exactly per `mcpTools`; `get_guide` returns `z.toJSONSchema(projectSchema)` + SKILL.md rules + `sampleProject`; record `clientInfo` as a connection
 - [ ] B10.3 MCP prompt `launch` serving SKILL.md (so it shows up as a slash command in every client)
@@ -153,3 +153,16 @@ Contract: `src/lib/agent-contracts.ts` (MCP tool schemas, workspace API, live ev
 - [ ] F10.3 Credits UI: remaining credits, kit uses credits when no agent is connected
 - [ ] F10.4 Landing: primary CTA becomes "Connect your Claude"; URL form stays as the no-agent path
 - [x] F10.5 Claude Code plugin + marketplace (`plugin/`, `.claude-plugin/marketplace.json`): `/plugin marketplace add AmritHehe/codex-event`, `/plugin install shipcast@shipcast`
+
+## Phase 11: Backend track for the collaborator (parallel to Phase 10)
+
+Everything here is server-side and independent of the MCP work. Where a workspace is needed, code against the `WorkspaceStore` interface that lands with B10.1 (`src/server/workspace/store.ts`); until then use the workspace id from the cookie as an opaque string.
+
+- [ ] B11.1 **Connect social accounts from the platform (OAuth).** Replace server env credentials with per-workspace connections: X (OAuth 2.0 PKCE), LinkedIn (Share on LinkedIn, `w_member_social`), Threads, Bluesky (app password form, or OAuth if available), Mastodon (per-instance app registration). Encrypt tokens at rest (`ENCRYPTION_KEY`, AES-GCM), refresh before expiry, disconnect endpoint. Publishers in `src/server/distribution/adapters.ts` read the workspace's tokens instead of `process.env`. API: `GET /api/accounts`, `GET /api/accounts/:provider/start`, `GET /api/accounts/:provider/callback`, `DELETE /api/accounts/:provider`. Frontend (us) builds the Connections UI against it; add the response schemas to a new `src/lib/accounts-contracts.ts` in the first PR.
+- [ ] B11.2 **Asset storage on Vercel Blob** (via Vercel Marketplace / `vercel blob`). Copy Firecrawl screenshots on generate (their URLs expire), store `save_asset` memes, and upload finished renders so publishers get public HTTPS media URLs (TikTok, Shorts, Pinterest need them). One helper `putAsset(workspaceId, bytes, type) -> url`.
+- [ ] B11.3 **Render to publish.** After a render job finishes, upload the MP4 to Blob (B11.2) and expose its URL on the job (`renderJob.url` becomes absolute). Then a "post this video" path: `POST /api/distribution/publish` accepts a `renderJobId` and resolves the media URL server-side.
+- [ ] B11.4 **Scheduling for direct channels.** Direct publishers only post immediately today. Add scheduled posts with Vercel Cron (or Vercel Queues): store scheduled items per workspace, run due ones through the existing ledger so retries stay idempotent.
+- [ ] B11.5 **Abuse protection.** Per-workspace and per-IP rate limits on `/api/generate`, `/api/kit`, `/api/edit` (credits spend money) and on `/mcp`. Vercel BotID on the public forms.
+- [ ] B11.6 **Deploy.** Vercel project for the web app (+ env via `vercel env`), render server on a long-running host (Railway/Fly) or Remotion Lambda, `RENDER_ORIGINS`/`NEXT_PUBLIC_RENDER_URL` wired, smoke test script against the deployed URLs.
+
+Order of value for the demo: B11.1 → B11.2 → B11.3, then the rest.
