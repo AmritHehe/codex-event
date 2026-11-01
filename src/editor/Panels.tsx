@@ -17,11 +17,11 @@ import {
 } from "@phosphor-icons/react";
 import { Thumbnail } from "@remotion/player";
 import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { LaunchVideo } from "@/video/LaunchVideo";
 import { ASPECTS, FPS, projectDuration, type Layer, type LayerType, type Scene } from "@/video/schema";
 import { focusFrame, LAYER_DEFAULTS, newId, ops, sceneCopy, useEditor } from "./store";
-import { IconButton, PanelTitle } from "./ui";
+import { cx, IconButton, Kbd, PanelTitle, POP, tc, useDismiss } from "./ui";
 
 export const LAYER_META: Record<LayerType, { label: string; icon: Icon }> = {
   text: { label: "Text", icon: TextTIcon },
@@ -32,10 +32,12 @@ export const LAYER_META: Record<LayerType, { label: string; icon: Icon }> = {
   cta: { label: "Button", icon: CursorClickIcon },
 };
 
-const layerTitle = (l: Layer) => {
+export const layerTitle = (l: Layer) => {
   const raw = "text" in l ? l.text : l.type === "list" ? l.items[0] : l.type === "stat" ? `${l.prefix ?? ""}${l.value}${l.suffix ?? ""}` : "Screenshot";
   return raw.replaceAll("*", "");
 };
+
+export const pad2 = (n: number) => String(n).padStart(2, "0");
 
 const BLANK_SCENE = (): Scene => ({
   id: newId(),
@@ -52,6 +54,7 @@ export function ScenesPanel() {
   const { project } = state;
   const { width, height } = ASPECTS[project.aspect];
   const total = projectDuration(project);
+  const portrait = width < height;
 
   const add = () => {
     const s = BLANK_SCENE();
@@ -59,11 +62,12 @@ export function ScenesPanel() {
   };
 
   return (
-    <section className="flex max-h-[52%] min-h-0 shrink-0 flex-col border-b border-line">
+    <section className="flex max-h-[55%] min-h-0 shrink-0 flex-col border-b border-line">
       <PanelTitle
+        meta={pad2(project.scenes.length)}
         action={
           <IconButton label="Add scene" onClick={add}>
-            <PlusIcon size={14} weight="bold" />
+            <PlusIcon size={13} />
           </IconButton>
         }
       >
@@ -73,7 +77,7 @@ export function ScenesPanel() {
         axis="y"
         values={project.scenes}
         onReorder={(scenes) => edit(ops.setScenes(scenes), "reorder-scenes")}
-        className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 pb-2"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-1.5"
       >
         {project.scenes.map((s, i) => {
           const active = s.id === current.id;
@@ -81,12 +85,18 @@ export function ScenesPanel() {
             <Reorder.Item
               key={s.id}
               value={s}
-              className={`group flex cursor-grab items-center gap-2.5 rounded-lg p-1.5 active:cursor-grabbing ${active ? "bg-accent-soft" : "hover:bg-hover"}`}
+              whileDrag={{ boxShadow: "var(--shadow-pop)", backgroundColor: "#fbfbfa" }}
+              className={cx(
+                "group relative flex cursor-grab items-center gap-2.5 py-1.5 pr-1.5 pl-3 active:cursor-grabbing",
+                active ? "bg-accent-soft" : "hover:bg-hover/60",
+              )}
               onClick={() => focus(s.id)}
             >
+              {active && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-accent" />}
+              <span className={cx("w-5 shrink-0 font-mono text-[10.5px] tabular-nums", active ? "text-accent" : "text-faint")}>{pad2(i + 1)}</span>
               <div
-                className={`w-[72px] shrink-0 overflow-hidden rounded-md ring-1 ${active ? "ring-accent" : "ring-line"}`}
-                style={{ aspectRatio: `${width} / ${height}`, maxHeight: 72, width: width < height ? 40 : 72 }}
+                className={cx("shrink-0 overflow-hidden rounded-[3px] bg-canvas ring-1", active ? "ring-accent/50" : "ring-line")}
+                style={{ aspectRatio: `${width} / ${height}`, width: portrait ? 26 : 64 }}
               >
                 <Thumbnail
                   component={LaunchVideo}
@@ -100,12 +110,10 @@ export function ScenesPanel() {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium">{s.name}</p>
-                <p className="font-mono text-[11px] text-muted">
-                  {i + 1} · {(s.durationInFrames / FPS).toFixed(1)}s
-                </p>
+                <p className="truncate text-[12.5px] leading-tight font-medium">{s.name}</p>
+                <p className="mt-0.5 font-mono text-[10.5px] text-muted tabular-nums">{tc(s.durationInFrames)}</p>
               </div>
-              <div className="flex opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
+              <div className="flex opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 max-lg:opacity-100">
                 <IconButton
                   label="Duplicate scene"
                   onClick={(e) => {
@@ -114,7 +122,7 @@ export function ScenesPanel() {
                     edit(ops.duplicateScene(s.id, copy), undefined, { sceneId: copy.id, layerId: null });
                   }}
                 >
-                  <CopyIcon size={14} />
+                  <CopyIcon size={13} />
                 </IconButton>
                 <IconButton
                   label="Delete scene"
@@ -124,7 +132,7 @@ export function ScenesPanel() {
                     edit(ops.removeScene(s.id));
                   }}
                 >
-                  <TrashIcon size={14} />
+                  <TrashIcon size={13} />
                 </IconButton>
               </div>
             </Reorder.Item>
@@ -138,35 +146,19 @@ export function ScenesPanel() {
 function AddLayerMenu({ onAdd }: { onAdd: (t: LayerType) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: PointerEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener("pointerdown", close);
-    window.addEventListener("keydown", close);
-    return () => {
-      window.removeEventListener("pointerdown", close);
-      window.removeEventListener("keydown", close);
-    };
-  }, [open]);
+  useDismiss(ref, open, useCallback(() => setOpen(false), []));
 
   return (
     <div ref={ref} className="relative">
-      <IconButton label="Add layer" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <PlusIcon size={14} weight="bold" />
+      <IconButton label="Add layer" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <PlusIcon size={13} />
       </IconButton>
       <AnimatePresence>
         {open && (
-          <motion.div
-            role="menu"
-            initial={{ opacity: 0, transform: "scale(0.96) translateY(-4px)" }}
-            animate={{ opacity: 1, transform: "scale(1) translateY(0px)" }}
-            exit={{ opacity: 0, transform: "scale(0.98)", transition: { duration: 0.1 } }}
-            transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
-            style={{ transformOrigin: "top right" }}
-            className="absolute top-8 right-0 z-20 w-44 rounded-xl bg-white p-1 shadow-pop"
-          >
+          <motion.div role="menu" {...POP} style={{ transformOrigin: "top right" }} className="absolute top-8 right-0 z-30 w-44 rounded-[10px] border border-line bg-panel p-1 shadow-pop">
+            <p className="px-2 pt-1 pb-1.5">
+              <span className="font-mono text-[10px] tracking-[0.08em] text-faint uppercase">New layer</span>
+            </p>
             {(Object.keys(LAYER_META) as LayerType[]).map((t) => {
               const { label, icon: I } = LAYER_META[t];
               return (
@@ -177,9 +169,9 @@ function AddLayerMenu({ onAdd }: { onAdd: (t: LayerType) => void }) {
                     onAdd(t);
                     setOpen(false);
                   }}
-                  className="press flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px] hover:bg-hover"
+                  className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-[12.5px] hover:bg-hover"
                 >
-                  <I size={15} className="text-muted" />
+                  <I size={14} className="text-muted" />
                   {label}
                 </button>
               );
@@ -191,56 +183,61 @@ function AddLayerMenu({ onAdd }: { onAdd: (t: LayerType) => void }) {
   );
 }
 
-function LayerRow({ layer, sceneId, active }: { layer: Layer; sceneId: string; active: boolean }) {
+function LayerRow({ layer, index, sceneId, active }: { layer: Layer; index: number; sceneId: string; active: boolean }) {
   const { edit, focus } = useEditor();
   const drag = useDragControls();
-  const { icon: I } = LAYER_META[layer.type];
+  const { icon: I, label } = LAYER_META[layer.type];
   return (
     <Reorder.Item
       value={layer}
       dragListener={false}
       dragControls={drag}
+      whileDrag={{ boxShadow: "var(--shadow-pop)", backgroundColor: "#fbfbfa" }}
       onClick={() => focus(sceneId, layer.id)}
-      className={`group flex h-8 cursor-default items-center gap-1.5 rounded-lg pr-1 pl-0.5 ${active ? "bg-accent-soft text-ink" : "hover:bg-hover"} ${layer.hidden ? "text-faint" : ""}`}
+      className={cx(
+        "group relative flex h-8 cursor-default items-center gap-1.5 pr-1.5 pl-1",
+        active ? "bg-accent-soft" : "hover:bg-hover/60",
+        layer.hidden && "text-faint",
+      )}
     >
-      <span
-        onPointerDown={(e) => drag.start(e)}
-        className="grid h-full w-5 cursor-grab touch-none place-items-center text-faint active:cursor-grabbing"
-        aria-hidden
-      >
-        <DotsSixVerticalIcon size={14} weight="bold" />
+      {active && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-accent" />}
+      <span onPointerDown={(e) => drag.start(e)} className="grid h-full w-5 cursor-grab touch-none place-items-center text-faint hover:text-muted active:cursor-grabbing" aria-hidden>
+        <DotsSixVerticalIcon size={13} weight="bold" />
       </span>
-      <I size={15} className={active ? "text-accent" : "text-muted"} />
-      <span className="min-w-0 flex-1 truncate text-[13px]">{layerTitle(layer)}</span>
+      <span className={cx("w-5 shrink-0 font-mono text-[10.5px] tabular-nums", active ? "text-accent" : "text-faint")}>L{index + 1}</span>
+      <I size={14} className={cx("shrink-0", active ? "text-ink" : "text-muted")} aria-label={label} />
+      <span className={cx("min-w-0 flex-1 truncate text-[12.5px]", layer.hidden && "line-through decoration-faint")}>{layerTitle(layer)}</span>
       <IconButton
         label={layer.hidden ? "Show layer" : "Hide layer"}
-        className={layer.hidden ? "" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}
+        className={layer.hidden ? "" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-lg:opacity-100"}
         onClick={(e) => {
           e.stopPropagation();
           edit(ops.updateLayer(sceneId, layer.id, { hidden: !layer.hidden }));
         }}
       >
-        {layer.hidden ? <EyeSlashIcon size={14} /> : <EyeIcon size={14} />}
+        {layer.hidden ? <EyeSlashIcon size={13} /> : <EyeIcon size={13} />}
       </IconButton>
       <IconButton
         label="Delete layer"
-        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-lg:opacity-100"
         onClick={(e) => {
           e.stopPropagation();
           edit(ops.removeLayer(sceneId, layer.id));
         }}
       >
-        <TrashIcon size={14} />
+        <TrashIcon size={13} />
       </IconButton>
     </Reorder.Item>
   );
 }
 
 export function LayersPanel() {
-  const { scene, layer: selected, edit } = useEditor();
+  const { state, scene, layer: selected, edit } = useEditor();
+  const index = state.project.scenes.indexOf(scene);
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <PanelTitle
+        meta={`SCN ${pad2(index + 1)}`}
         action={
           <AddLayerMenu
             onAdd={(t) => {
@@ -259,13 +256,16 @@ export function LayersPanel() {
           axis="y"
           values={scene.layers}
           onReorder={(layers) => edit(ops.setLayers(scene.id, layers), `reorder-${scene.id}`)}
-          className="flex min-h-0 flex-col gap-0.5 overflow-y-auto px-2 pb-2"
+          className="flex min-h-0 flex-col overflow-y-auto pb-2"
         >
-          {scene.layers.map((l) => (
-            <LayerRow key={l.id} layer={l} sceneId={scene.id} active={l.id === selected?.id} />
+          {scene.layers.map((l, i) => (
+            <LayerRow key={l.id} layer={l} index={i} sceneId={scene.id} active={l.id === selected?.id} />
           ))}
         </Reorder.Group>
       )}
+      <p className="mt-auto hidden items-center gap-1.5 border-t border-line px-3 py-2 text-[11px] text-muted lg:flex">
+        <Kbd>Space</Kbd> play <Kbd>⌫</Kbd> delete <Kbd>/</Kbd> prompt
+      </p>
     </section>
   );
 }
