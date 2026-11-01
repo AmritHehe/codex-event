@@ -77,7 +77,7 @@ export function Chip({ tone, children }: { tone: "on" | "ink" | "off"; children:
 /** Radio group drawn as a segmented hairline control. Arrow keys move, as a native radio group would. */
 export function Segmented<T extends string>({ name, value, options, onChange }: { name: string; value: T; options: readonly { value: T; label: string }[]; onChange: (v: T) => void }) {
   return (
-    <div role="radiogroup" aria-label={name} className="inline-flex rounded-md border border-line p-0.5">
+    <div role="radiogroup" aria-label={name} className="inline-flex max-w-full self-start overflow-x-auto rounded-md border border-line p-0.5">
       {options.map((o, i) => {
         const on = o.value === value;
         return (

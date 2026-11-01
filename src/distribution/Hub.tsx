@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowUpRightIcon, CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, ArrowUpRightIcon, CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { AGENTS, type AgentId } from "./agents";
 import { ASSET_LABEL, AUTOMATION, CATEGORIES, CHANNELS, type Automation, type CategoryId, type Channel } from "./channels";
 import { AgentGlyph, ChannelLogo } from "./icons";
 import { KitSheet, Tick, useKit } from "./Kit";
+import { MemeSheet } from "./MemeAgent";
 import { ConnectionsSheet, PublishSheet, connectionSummary, isPublishable, usePublishing, type PublishId } from "./Publisher";
 import { Fact, label, mono, note, pad } from "./ui";
 
@@ -87,6 +88,19 @@ function BarButton({ onClick, children }: { onClick: (keyboard: boolean) => void
       className={`${mono} press flex h-8 shrink-0 items-center gap-2 rounded-md px-2 text-ink transition-colors duration-150 hover:bg-hover`}
     >
       {children}
+    </button>
+  );
+}
+
+/** An agent's working surface, linked from its track header. */
+function ToolLink({ onClick, children }: { onClick: (keyboard: boolean) => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={(e) => onClick(e.detail === 0)}
+      className={`${mono} group mt-3 inline-flex items-center gap-1.5 text-ink underline decoration-line underline-offset-4 hover:decoration-ink`}
+    >
+      {children}
+      <ArrowRightIcon size={12} className="transition-transform duration-150 group-hover:translate-x-0.5" />
     </button>
   );
 }
@@ -257,11 +271,12 @@ type Panel =
   | { kind: "channel"; c: Channel }
   | { kind: "kit" }
   | { kind: "connections"; back?: Panel }
-  | { kind: "publish"; id: PublishId; back?: Panel };
+  | { kind: "publish"; id: PublishId; back?: Panel }
+  | { kind: "meme" };
 
 const BYID = Object.fromEntries(CHANNELS.map((c) => [c.id, c]));
 const panelTitle = (p: Panel): string =>
-  p.kind === "channel" ? p.c.name : p.kind === "kit" ? "Launch kit" : p.kind === "connections" ? "Connections" : `Publish to ${BYID[p.id].name}`;
+  p.kind === "channel" ? p.c.name : p.kind === "kit" ? "Launch kit" : p.kind === "connections" ? "Connections" : p.kind === "meme" ? "Meme composer" : `Publish to ${BYID[p.id].name}`;
 const backLabel = (p?: Panel) => (!p ? undefined : p.kind === "kit" ? "Back to kit" : p.kind === "channel" ? `Back to ${p.c.name}` : "Back");
 
 export function Hub() {
@@ -319,6 +334,7 @@ export function Hub() {
               Connections
               {connectionSummary(pub) && <span className="text-accent">{connectionSummary(pub)}</span>}
             </BarButton>
+            <BarButton onClick={(keyboard) => show({ kind: "meme" }, keyboard)}>Meme</BarButton>
           </span>
         </div>
 
@@ -473,6 +489,9 @@ export function Hub() {
                       <div className="text-[14px] leading-[1.55]">
                         <p className="text-ink">{a.role}</p>
                         <p className="mt-1 hidden text-muted md:block">{a.does.join(". ")}.</p>
+                        {a.id === "meme" && (
+                          <ToolLink onClick={(keyboard) => show({ kind: "meme" }, keyboard)}>Open the meme composer</ToolLink>
+                        )}
                       </div>
                     </header>
                     <ul>
@@ -520,8 +539,10 @@ export function Hub() {
       <AnimatePresence custom={instant}>
         {open && (
           // One stable key: moving between sheets swaps content without replaying the slide.
-          <Drawer key="sheet" title={panelTitle(open)} instant={instant} onClose={close}>
-            {open.kind === "kit" ? (
+          <Drawer key="sheet" title={panelTitle(open)} wide={open.kind === "meme"} instant={instant} onClose={close}>
+            {open.kind === "meme" ? (
+              <MemeSheet />
+            ) : open.kind === "kit" ? (
               <KitSheet picked={picked} kit={kit} onRemove={pick} pub={pub} onPublish={(id) => setOpen({ kind: "publish", id, back: open })} />
             ) : open.kind === "channel" ? (
               <ChannelSheet
