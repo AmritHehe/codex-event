@@ -58,7 +58,7 @@ function SceneInspector() {
               min={1}
               max={20}
               step={0.5}
-              value={scene.durationInFrames / FPS}
+              value={+(scene.durationInFrames / FPS).toFixed(2)}
               onChange={(e) => {
                 const v = Math.round(Number(e.target.value) * FPS);
                 if (v >= S.durationInFrames.minValue! && v <= S.durationInFrames.maxValue!) set({ durationInFrames: v }, "dur");
