@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AGENTS, type AgentId } from "./agents";
 import { ASSET_LABEL, AUTOMATION, CATEGORIES, CHANNELS, type Automation, type CategoryId, type Channel } from "./channels";
 import { AGENT_ICON, AgentGlyph, ChannelLogo, LOGO } from "./icons";
+import { KitPanel } from "./KitPanel";
 
 
 function AutomationBadge({ a }: { a: Automation }) {
@@ -122,6 +123,8 @@ export function Hub() {
           {CHANNELS.length} channels, {AGENTS.length} agents. {auto} channels can be posted to automatically; the rest get drafts you approve.
         </p>
       </header>
+
+      <KitPanel />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
