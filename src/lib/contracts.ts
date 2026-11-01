@@ -1,5 +1,6 @@
 // API contract between the frontend track (UI) and the backend track (route handlers + render server).
 // Both sides import these schemas. Changing one is a breaking change: do it in its own small PR.
+import { ensureWorkspace } from "./workspace-client";
 import { z } from "zod";
 import { projectSchema } from "@/video/schema";
 import { researchBrief } from "./research-contracts";
@@ -48,6 +49,7 @@ export const RENDER_URL = process.env.NEXT_PUBLIC_RENDER_URL ?? "http://localhos
 
 /** Typed POST for the frontend: validates the response, throws the server's error message on failure. */
 export async function postJson<T>(url: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
+  if (url.startsWith("/api/")) await ensureWorkspace();
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(apiError.safeParse(data).data?.error ?? `Request failed (${res.status})`);

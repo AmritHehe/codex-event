@@ -7,11 +7,11 @@ import { workerTask } from "./worker-task";
 
 async function main() {
   const root = process.cwd();
-  const outDir = resolve(root, "out");
+  const outDir = resolve(process.env.RENDER_OUT_DIR ?? resolve(root, "out"));
   await mkdir(outDir, { recursive: true });
   console.log("Bundling LaunchVideo once for all render jobs…");
   const serveUrl = await bundle({ entryPoint: resolve(root, "src/video/index.ts"), outDir: resolve(outDir, "bundle") });
-  const queue = new RenderQueue(workerTask(root, serveUrl, outDir));
+  const queue = new RenderQueue(workerTask(root, serveUrl, outDir),20,resolve(outDir,"jobs"));
   const origins = process.env.RENDER_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean);
   const server = createRenderServer(queue, outDir, origins);
   const port = Number(process.env.RENDER_PORT ?? 3200);

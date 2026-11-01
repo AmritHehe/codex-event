@@ -53,6 +53,9 @@ dependencies:
   remotion:
     specifier: ^4.0.539
     version: 4.0.539(react-dom@19.3.0)(react@19.3.0)
+  sharp:
+    specifier: ^0.35.5
+    version: 0.35.5(@types/node@20.19.43)
   zod:
     specifier: ^4.6.7
     version: 4.6.7
@@ -644,7 +647,6 @@ packages:
     engines: {node: '>=18'}
     requiresBuild: true
     dev: false
-    optional: true
 
   /@img/sharp-darwin-arm64@0.35.5:
     resolution: {integrity: sha512-QRUlFQ0WxvdWyqqG/WtI3iupfD5rBzmCHXSdPsY91sAtVtTo7Q4cb6zOccZ3gqEqkr0f1As1ehLqmEpDsRf+lg==}
@@ -5121,7 +5123,6 @@ packages:
       '@img/sharp-win32-ia32': 0.35.5
       '@img/sharp-win32-x64': 0.35.5
     dev: false
-    optional: true
 
   /shebang-command@2.0.0:
     resolution: {integrity: sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==}

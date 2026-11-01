@@ -1,3 +1,4 @@
+import { paidAttempt, sameOrigin } from "../limits";
 import { ApiError } from "@/server/http";
 import { WorkspaceError, workspaces } from "./store";
 
@@ -25,22 +26,28 @@ export const unauthorized = () => json({ error: "No Shipcast workspace. Create o
 export function withWorkspace<C>(run: (workspaceId: string, request: Request, context: C) => Promise<Response>) {
   return async (request: Request, context: C) => {
     try {
+      if (!["GET","HEAD","OPTIONS"].includes(request.method)) sameOrigin(request);
       const id = await workspaceFrom(request);
       return id ? await run(id, request, context) : unauthorized();
     } catch (error) {
-      if (error instanceof WorkspaceError) return json({ error: error.message }, error.status);
+      if (error instanceof WorkspaceError || error instanceof ApiError) return json({ error: error.message }, error.status);
       throw error;
     }
   };
 }
 
 /**
- * Bill server-paid AI to the caller's workspace. Anonymous requests run free as before. The cost is reserved
+ * Bill server-paid AI to the caller's workspace. A valid workspace is required. The cost is reserved
  * up front (so concurrent calls cannot overdraw) and refunded if the work fails: net, only success is billed.
  */
 export async function charge<T>(request: Request, cost: number, run: () => Promise<T>): Promise<T> {
   const id = await workspaceFrom(request);
-  if (!id) return run();
+  sameOrigin(request);
+  if (!id) {
+    if (process.env.NODE_ENV !== "production" && process.env.ALLOW_ANONYMOUS_AI === "true") return run();
+    throw new ApiError(401, "Create a workspace before using AI.");
+  }
+  await paidAttempt(id);
   const store = workspaces();
   let remaining: number;
   try { remaining = await store.spendCredits(id, cost); }

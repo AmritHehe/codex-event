@@ -33,9 +33,9 @@ export const CATEGORIES: { id: CategoryId; label: string }[] = [
 ];
 
 export const AUTOMATION: Record<Automation, { label: string; explain: string }> = {
-  full: { label: "Auto-post", explain: "The official API supports publishing. The agent posts on schedule once you approve the kit." },
+  full: { label: "API available", explain: "The platform offers a publishing API. See Connections for destinations implemented by Shipcast; other catalog entries are preparation guides." },
   assisted: { label: "Agent drafts", explain: "No practical posting API, or automation breaks the rules. The agent prepares everything and you post." },
-  manual: { label: "Manual", explain: "Automated or AI-written posts are banned here. The agent preps and monitors; you write and post yourself." },
+  manual: { label: "Manual", explain: "Automated or AI-written posts are banned here. Use the preparation checklist; write and post yourself." },
 };
 
 export const ASSET_LABEL: Record<Asset, string> = {

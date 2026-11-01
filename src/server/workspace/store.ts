@@ -1,3 +1,4 @@
+import { putAsset, validateImage } from "../assets/blob";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -256,7 +257,13 @@ export class FileWorkspaceStore implements WorkspaceStore {
     });
   }
 
-  saveAsset(workspaceId: string, projectId: string, input: NewAsset) {
+  async saveAsset(workspaceId: string, projectId: string, input: NewAsset) {
+    if(!(await this.getProject(workspaceId,projectId))) throw new WorkspaceError(404,"Project not found.");
+    if("bytes" in input) {
+      if(input.bytes.length>2_000_000) throw new WorkspaceError(413,"Image exceeds 2 MB.");
+      await validateImage(input.bytes);
+      if(process.env.BLOB_READ_WRITE_TOKEN) input={kind:input.kind,caption:input.caption,url:await putAsset(workspaceId,input.bytes,input.type)};
+    }
     return this.transaction(workspaceId, async (data) => {
       const project = this.project(data, projectId);
       if (project.assets.length >= MAX_ASSETS) throw new WorkspaceError(409, `A project holds at most ${MAX_ASSETS} assets.`);

@@ -3,6 +3,7 @@
 import { ArrowRightIcon, ArrowUpRightIcon, CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { PUBLISH_CHANNELS } from "@/lib/distribution-contracts";
 import { AGENTS, type AgentId } from "./agents";
 import { ASSET_LABEL, AUTOMATION, CATEGORIES, CHANNELS, type Automation, type CategoryId, type Channel } from "./channels";
 import { AgentGlyph, ChannelLogo } from "./icons";
@@ -386,7 +387,7 @@ export function Hub() {
           </h1>
           <div className="flex max-w-[46ch] flex-col gap-5 lg:pb-3">
             <p className="text-[17px] leading-[1.55] text-ink">
-              Every place a launch can go, and the agent that works it. {count("full")} channels post through official APIs, {count("assisted")} get drafts you
+              Workflow categories guide your connected agent; they are not background workers. {PUBLISH_CHANNELS.length} publishing adapters are available in Connections. {count("full")} platforms offer APIs, {count("assisted")} support drafts you
               approve, and {count("manual")} {count("manual") === 1 ? "stays" : "stay"} manual because the rules ban automation.
             </p>
             <p className={note}>Platform rules researched {RESEARCHED}. They change often, so check before you rely on one.</p>

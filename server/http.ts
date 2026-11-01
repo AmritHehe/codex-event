@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
@@ -41,6 +42,14 @@ const json = (res: ServerResponse, status: number, data: unknown) => {
 export function createRenderServer(queue: RenderQueue, outDir: string, origins = ["http://localhost:3000", "http://127.0.0.1:3000"]) {
   return createServer(async (req, res) => {
     try {
+      const key = process.env.RENDER_API_TOKEN;
+      if (process.env.NODE_ENV === "production" && (!key || key.length < 24)) throw new HttpError(503,"Render authentication is not configured.");
+      if (key) {
+        const hash=(v:string)=>createHash("sha256").update(v).digest();
+        if(!timingSafeEqual(hash(req.headers.authorization ?? ""),hash(`Bearer ${key}`))) throw new HttpError(401,"Invalid render key.");
+      }
+      const workspaceId = typeof req.headers["x-workspace-id"] === "string" ? req.headers["x-workspace-id"] : undefined;
+      if(key && !/^[a-f0-9]{24}$/.test(workspaceId ?? "")) throw new HttpError(401,"Workspace required.");
       const origin = req.headers.origin;
       res.setHeader("Vary", "Origin");
       if (origin && !origins.includes(origin)) throw new HttpError(403, "This origin is not allowed.");
@@ -54,12 +63,13 @@ export function createRenderServer(queue: RenderQueue, outDir: string, origins =
         if (!parsed.success) throw new HttpError(400, "Invalid video project.");
         const { project } = parsed.data;
         if (projectDuration(project) > 18_000 || project.scenes.length > 50 || project.scenes.some((s) => s.layers.length > 100)) throw new HttpError(413, "Project exceeds the demo render limits.");
-        try { json(res, 202, queue.enqueue(project)); }
+        try { json(res, 202, queue.enqueue(project, workspaceId)); }
         catch (e) { throw new HttpError(503, e instanceof Error ? e.message : "Render queue is unavailable."); }
         return;
       }
       const status = path.match(new RegExp(`^/render/(${uuid})$`));
       if (status && req.method === "GET") {
+        if (key && !queue.owns(status[1],workspaceId!)) throw new HttpError(404,"Render not found.");
         const job = queue.get(status[1]);
         if (!job) throw new HttpError(404, "Render job not found. Jobs reset when the server restarts.");
         json(res, 200, job);
@@ -67,6 +77,7 @@ export function createRenderServer(queue: RenderQueue, outDir: string, origins =
       }
       const file = path.match(new RegExp(`^/files/(${uuid})\\.mp4$`));
       if (file && ["GET", "HEAD"].includes(req.method ?? "")) {
+        if(key && !queue.owns(file[1],workspaceId!)) throw new HttpError(404,"Render not found.");
         if (queue.get(file[1])?.status !== "done") throw new HttpError(404, "Rendered video is not ready.");
         const filename = `${file[1]}.mp4`;
         const location = join(outDir, filename);

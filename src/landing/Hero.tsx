@@ -97,7 +97,7 @@ export function Hero({ channels, agents }: { channels: number; agents: number })
         <motion.div {...anim(0)} className={`flex justify-between gap-4 border-b border-line pb-3 ${LABEL}`}>
           <span className="max-sm:hidden">Launch videos and distribution</span>
           <span className="tabular-nums">
-            {channels} channels · {agents} agents
+            {channels} channels · {agents} workflows
           </span>
         </motion.div>
 
@@ -129,8 +129,8 @@ export function Hero({ channels, agents }: { channels: number; agents: number })
         <div className="mt-10 grid gap-x-10 gap-y-12 pb-24 md:mt-12 md:grid-cols-12 md:pb-32">
           <motion.div {...anim(0.7)} className="flex flex-col gap-8 md:col-span-5 lg:col-span-4">
             <p className="max-w-[40ch] text-[17px] leading-[1.55] text-muted md:text-[18px]">
-              Shipcast turns your product page into a launch video you can edit layer by layer, cut for every feed, then gets it in front of
-              people on {channels} channels.
+              Shipcast turns your product page into a launch video you can edit layer by layer, cut for every feed, with launch guidance for
+              {channels} channels.
             </p>
             <div>
               <Link

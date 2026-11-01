@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+process.env.ALLOW_ANONYMOUS_AI = "true"; // isolated provider contract tests; production ignores this flag
 import { mkdtempSync } from "node:fs";
 import { readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

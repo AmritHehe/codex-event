@@ -1,9 +1,10 @@
 "use client";
 
 import { ArrowUpRightIcon } from "@phosphor-icons/react";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { PUBLISH_CHANNELS, publishReceipt, publishRequest, type PublishInput, type PublishReceipt } from "@/lib/distribution-contracts";
+import { renderJob } from "@/lib/contracts";
 import { CHANNELS } from "./channels";
 import { ChannelLogo } from "./icons";
 import { Alert, Chip, Fact, SheetHead, Segmented, Working, field, label, mono, note, pad, primary, secondary } from "./ui";
@@ -16,7 +17,7 @@ const errorResponse = z.object({ error: z.string() });
 const TARGET = Object.fromEntries(PUBLISH_CHANNELS.map((c) => [c.id, c])) as Record<PublishId, Target>;
 const CATALOG = Object.fromEntries(CHANNELS.map((c) => [c.id, c]));
 const ROUTE = { direct: "Official API", aggregator: "Ayrshare" } as const;
-const MEDIA_REQUIRED: string[] = ["tiktok", "youtube-shorts", "pinterest"];
+const MEDIA_REQUIRED: string[] = ["tiktok", "youtube-shorts", "pinterest", "instagram"];
 
 export const isPublishable = (id: string): id is PublishId => id in TARGET;
 /** Counted the way the contract counts: graphemes, so an emoji is one character. */
@@ -247,6 +248,17 @@ export function PublishSheet({
   const text = draft ?? own;
   const setText = onDraft && draft !== undefined ? onDraft : setOwn;
   const [media, setMedia] = useState("");
+  const [renderId,setRenderId]=useState("");
+  const [renders,setRenders]=useState<{jobId:string;name:string}[]>([]);
+  useEffect(()=>{
+    const abort=new AbortController();
+    fetch("/api/render",{signal:abort.signal,cache:"no-store"}).then(async response=>{
+      if(!response.ok) return;
+      const parsed=z.object({jobs:z.array(renderJob.extend({name:z.string()}))}).parse(await response.json());
+      setRenders(parsed.jobs.filter(job=>job.status==="done" && job.url?.startsWith("https://")));
+    }).catch(()=>{});
+    return ()=>abort.abort();
+  },[]);
   const [date, setDate] = useState("");
   const [title, setTitle] = useState("");
   const [board, setBoard] = useState("");
@@ -276,7 +288,8 @@ export function PublishSheet({
     const body = {
       channel: id,
       text,
-      mediaUrl: aggregator ? media || undefined : undefined,
+      mediaUrl: aggregator && !renderId ? media || undefined : undefined,
+      renderJobId: aggregator ? renderId || undefined : undefined,
       scheduleAt,
       title: title || undefined,
       boardId: board || undefined,
@@ -375,8 +388,14 @@ export function PublishSheet({
           {aggregator && (
             <>
               <label className="flex flex-col gap-2">
+                <span className={label}>Completed export</span>
+                <select aria-label="Completed export" className={field} value={renderId} onChange={e=>{setRenderId(e.target.value);setMedia("");}}>
+                  <option value="">Use a public media URL</option>
+                  {renders.map(job=><option key={job.jobId} value={job.jobId}>{job.name}</option>)}
+                </select>
+                <span className={note}>Completed cloud exports from your workspace appear here. Export in Studio first.</span>
                 <span className={label}>Public media URL{MEDIA_REQUIRED.includes(id) ? "" : " · optional"}</span>
-                <input type="url" inputMode="url" placeholder="https://cdn.example.com/launch.mp4" value={media} onChange={(e) => setMedia(e.target.value)} style={{ outline: "none" }} className={field} />
+                <input disabled={!!renderId} type="url" inputMode="url" placeholder="https://cdn.example.com/launch.mp4" value={media} onChange={(e) => setMedia(e.target.value)} style={{ outline: "none" }} className={field} />
                 <span className={note}>A public HTTPS image or video. Local render downloads must be uploaded to your own host first.</span>
               </label>
               <label className="flex flex-col gap-2">
@@ -450,6 +469,7 @@ export function PublishSheet({
                 "Now, on confirm"
               )}
             </Fact>
+            {request.renderJobId && <p className={note}>Completed export: {renders.find(job=>job.jobId===request.renderJobId)?.name ?? request.renderJobId}</p>}
             {request.mediaUrl && (
               <Fact name="Media">
                 <span className="font-mono text-[12px] break-all">{request.mediaUrl}</span>
