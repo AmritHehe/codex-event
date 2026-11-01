@@ -50,16 +50,38 @@ Run: `pnpm dev` (Next) + `pnpm render-server` (Node). Remotion Studio: `pnpm stu
 - [x] Theme panel (brand colors/fonts) + aspect switcher
 - [x] Undo/redo + autosave to localStorage
 
-### Phase 3 — AI generation
+### Phase 3 — AI generation · owner: Amrit (+ Claude)
 - [ ] Firecrawl integration: URL → content + screenshot + brand
 - [ ] `POST /api/generate`: scraped data → project JSON (structured output, zod-validated)
 - [ ] Chat edit: "make hook punchier, dark theme" → patched project JSON
 - [ ] Landing input: paste URL → land in editor with generated video
 
-### Phase 4 — Render & export
-- [ ] Node render server: bundle once, `renderMedia` jobs, progress
-- [ ] Export UI: pick aspects → MP4s, progress bar, download
-- [ ] `renderStill` → thumbnails / static posts
+### Phase 4 — Render & export · owner: collaborator (via PR)
+Runs in parallel with Phase 3. Self-contained: a Node service plus one button in the Studio.
+Branch `feat/render-server`, open a PR into `main`, we review and merge. Split into 2 PRs if easier (server first, then UI).
+
+**PR 1: render server** (`server/render.ts`, run with `pnpm render-server`, port 3200)
+- [ ] Bundle `src/video/index.ts` once at startup (`@remotion/bundler`), reuse the bundle for every job
+- [ ] `POST /render` body `{ project: Project }` → validate with `projectSchema` (400 on failure) → `{ jobId }`
+- [ ] `GET /render/:jobId` → `{ status: "queued" | "rendering" | "done" | "error", progress: 0..1, url?, error? }`
+- [ ] `GET /files/:jobId.mp4` serves the result (local `out/` folder, gitignored)
+- [ ] Composition id `LaunchVideo`, inputProps `{ project }`; `selectComposition` picks up size/length from `calculateMetadata` in `src/video/Root.tsx`
+- [ ] Jobs run one at a time (in-memory queue is fine); CORS allows `http://localhost:3000`
+- [ ] Framework: plain `node:http` or Hono, your call. Add `@remotion/bundler` + `@remotion/renderer` pinned to the same version as `remotion`
+
+**PR 2: export UI**
+- [ ] "Export" button in the Studio header (`src/editor/Editor.tsx`), next to Distribute
+- [ ] Popover: pick formats (16:9 / 9:16 / 1:1, current one preselected) → one job each → progress bars → download links
+- [ ] Render server URL from `NEXT_PUBLIC_RENDER_URL` (default `http://localhost:3200`); clear error if it isn't running
+- [ ] Follow the existing UI kit in `src/editor/ui.tsx` (light theme, `press` class, 8px controls)
+
+**Done when**
+- [ ] Sample project renders to MP4 in all three formats and plays with the same timing as the Player
+- [ ] Invalid project JSON returns 400, and a crashed render shows `status: "error"` instead of hanging
+- [ ] CI green; screenshots or a clip in the PR
+- [ ] Don't edit `src/video/schema.ts`; if you need to, call it out in the PR
+
+Later (not required): `renderStill` endpoint for thumbnails and static posts.
 
 ### Phase 5 — Distribution kit
 - [x] Distribution hub: 66 channels, 9 agents, automation level per channel (`/distribution`)
