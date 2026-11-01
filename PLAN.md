@@ -111,7 +111,7 @@ Phase 5 implementation: the copy agent ships in the Phase 3 PR. The distribution
 - [ ] "Double down": regenerate from best-performing variant
 
 ### Phase 7 — Ship → announce from IDE
-- [ ] MCP server: `create_launch(url | repo)` tool → project link + MP4
+- [x] MCP server: superseded by Phase 10 (`/mcp`, 10 tools incl. `research_product`)
 - [ ] GitHub release/changelog → "what's new" video
 
 ### Phase 8 — Demo polish
@@ -120,9 +120,9 @@ Phase 5 implementation: the copy agent ships in the Phase 3 PR. The distribution
 - [ ] Demo script: judge's URL → video in 60s → chat edit → post live
 
 ### Phase 9: Frontend redesign to DESIGN.md (frontend track)
-- [ ] Landing: timeline-as-page concept, scroll playhead HUD
-- [ ] Studio: pro editing-tool chrome (tracks, timecode, hairlines)
-- [ ] Distribution: editorial index of channels and agents
+- [x] Landing: timeline-as-page concept, scroll playhead HUD
+- [x] Studio: pro editing-tool chrome (tracks, timecode, hairlines)
+- [x] Distribution: editorial index of channels and agents
 
 ## Phase 10: Bring your own agent (the core bet)
 
@@ -139,19 +139,19 @@ Contract: `src/lib/agent-contracts.ts` (MCP tool schemas, workspace API, live ev
 6. Posting via the Phase 5 publishers.
 
 **Backend (us: Amrit + Claude, the MCP is the core of the demo)**
-- [ ] B10.1 Workspace store: anonymous workspace + random token (hash at rest), httpOnly cookie for web. File store in dev (`.data/`), Upstash Redis via Vercel Marketplace for deploy
-- [ ] B10.2 MCP server at `/mcp` (Streamable HTTP, `mcp-handler` + official SDK), Bearer token auth, tools exactly per `mcpTools`; `get_guide` returns `z.toJSONSchema(projectSchema)` + SKILL.md rules + `sampleProject`; record `clientInfo` as a connection
-- [ ] B10.3 MCP prompt `launch` serving SKILL.md (so it shows up as a slash command in every client)
-- [ ] B10.4 `GET /api/workspace/events` SSE per `agentEvent`; `GET /api/projects/:id`; `POST /api/workspace/brief`
-- [ ] B10.5 Credits ledger: start at `FREE_CREDITS`, debit `/api/kit` (1 per channel) and `/api/generate`; 402 with a clear message when empty
+- [x] B10.1 Workspace store: anonymous workspace + random token (hash at rest), httpOnly cookie for web. File store in dev (`.data/`), Upstash Redis via Vercel Marketplace for deploy
+- [x] B10.2 MCP server at `/mcp` (Streamable HTTP, `mcp-handler` + official SDK), Bearer token auth, tools exactly per `mcpTools`; `get_guide` returns `z.toJSONSchema(projectSchema)` + SKILL.md rules + `sampleProject`; record `clientInfo` as a connection
+- [x] B10.3 MCP prompt `launch` serving SKILL.md (so it shows up as a slash command in every client)
+- [x] B10.4 `GET /api/workspace/events` SSE per `agentEvent`; `GET /api/projects/:id`; `POST /api/workspace/brief`
+- [x] B10.5 Credits ledger: start at `FREE_CREDITS`, debit `/api/kit` (1 per channel) and `/api/generate`; 402 with a clear message when empty
 - [ ] B10.6 Stretch: MCP OAuth (so "connect" is a browser approve screen instead of a token)
-- [ ] B10.7 Verify install commands for Codex (`codex mcp add`) and Gemini (`gemini mcp add`) against current CLI docs
+- [x] B10.7 Verify install commands for Codex (`codex mcp add`) and Gemini (`gemini mcp add`) against current CLI docs
 
 **Frontend (us)**
-- [ ] F10.1 `/connect` onboarding: agent picker, URL brief, one-command copy, live connection state, "run /shipcast:launch" step
-- [ ] F10.2 Live build in Studio: scenes stream onto the timeline as the agent writes them (activity feed of tool calls)
-- [ ] F10.3 Credits UI: remaining credits, kit uses credits when no agent is connected
-- [ ] F10.4 Landing: primary CTA becomes "Connect your Claude"; URL form stays as the no-agent path
+- [x] F10.1 `/connect` onboarding: agent picker, URL brief, one-command copy, live connection state, "run /shipcast:launch" step
+- [x] F10.2 Live build in Studio: scenes stream onto the timeline as the agent writes them (activity feed of tool calls)
+- [ ] F10.3 Credits UI: remaining credits shown on /connect; still missing in Studio header and kit panel
+- [x] F10.4 Landing: primary CTA becomes "Connect your agent"; URL form stays as the no-agent path
 - [x] F10.5 Claude Code plugin + marketplace (`plugin/`, `.claude-plugin/marketplace.json`): `/plugin marketplace add AmritHehe/codex-event`, `/plugin install shipcast@shipcast`
 
 ## Phase 11: Backend track for the collaborator (parallel to Phase 10)
@@ -159,8 +159,8 @@ Contract: `src/lib/agent-contracts.ts` (MCP tool schemas, workspace API, live ev
 Everything here is server-side and independent of the MCP work. Where a workspace is needed, code against the `WorkspaceStore` interface that lands with B10.1 (`src/server/workspace/store.ts`); until then use the workspace id from the cookie as an opaque string.
 
 - [ ] B11.1 **Connect social accounts from the platform (OAuth).** Replace server env credentials with per-workspace connections: X (OAuth 2.0 PKCE), LinkedIn (Share on LinkedIn, `w_member_social`), Threads, Bluesky (app password form, or OAuth if available), Mastodon (per-instance app registration). Encrypt tokens at rest (`ENCRYPTION_KEY`, AES-GCM), refresh before expiry, disconnect endpoint. Publishers in `src/server/distribution/adapters.ts` read the workspace's tokens instead of `process.env`. API: `GET /api/accounts`, `GET /api/accounts/:provider/start`, `GET /api/accounts/:provider/callback`, `DELETE /api/accounts/:provider`. Frontend (us) builds the Connections UI against it; add the response schemas to a new `src/lib/accounts-contracts.ts` in the first PR.
-- [ ] B11.2 **Asset storage on Vercel Blob** (via Vercel Marketplace / `vercel blob`). Copy Firecrawl screenshots on generate (their URLs expire), store `save_asset` memes, and upload finished renders so publishers get public HTTPS media URLs (TikTok, Shorts, Pinterest need them). One helper `putAsset(workspaceId, bytes, type) -> url`.
-- [ ] B11.3 **Render to publish.** After a render job finishes, upload the MP4 to Blob (B11.2) and expose its URL on the job (`renderJob.url` becomes absolute). Then a "post this video" path: `POST /api/distribution/publish` accepts a `renderJobId` and resolves the media URL server-side.
+- [x] B11.2 **Asset storage on Vercel Blob** (via Vercel Marketplace / `vercel blob`). Copy Firecrawl screenshots on generate (their URLs expire), store `save_asset` memes, and upload finished renders so publishers get public HTTPS media URLs (TikTok, Shorts, Pinterest need them). One helper `putAsset(workspaceId, bytes, type) -> url`.
+- [x] B11.3 **Render to publish.** After a render job finishes, upload the MP4 to Blob (B11.2) and expose its URL on the job (`renderJob.url` becomes absolute). Then a "post this video" path: `POST /api/distribution/publish` accepts a `renderJobId` and resolves the media URL server-side.
 - [ ] B11.4 **Scheduling for direct channels.** Direct publishers only post immediately today. Add scheduled posts with Vercel Cron (or Vercel Queues): store scheduled items per workspace, run due ones through the existing ledger so retries stay idempotent.
 - [ ] B11.5 **Abuse protection.** Per-workspace and per-IP rate limits on `/api/generate`, `/api/kit`, `/api/edit` (credits spend money) and on `/mcp`. Vercel BotID on the public forms.
 - [ ] B11.6 **Deploy.** Vercel project for the web app (+ env via `vercel env`), render server on a long-running host (Railway/Fly) or Remotion Lambda, `RENDER_ORIGINS`/`NEXT_PUBLIC_RENDER_URL` wired, smoke test script against the deployed URLs.
