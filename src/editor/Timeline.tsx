@@ -1,6 +1,7 @@
 "use client";
 
 import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { FPS, projectDuration, sceneStarts, TRANSITION_FRAMES } from "@/video/schema";
 import { LAYER_META, layerTitle, pad2 } from "./Panels";
@@ -30,6 +31,7 @@ export function Timeline() {
   const time = useRef<HTMLSpanElement>(null);
   const [playing, setPlaying] = useState(false);
   const [laneW, setLaneW] = useState(800);
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     const el = lanes.current;
@@ -150,12 +152,17 @@ export function Timeline() {
           <span className="truncate text-[12px] text-muted max-lg:hidden">Scenes</span>
         </div>
         <div className="relative h-11 cursor-ew-resize touch-none border-b border-line" {...scrub}>
+          {/* Scenes added after first paint (agent live build, new draft) wipe in from the left. */}
+          <AnimatePresence initial={false}>
           {project.scenes.map((s, i) => {
             const active = s.id === current.id;
             const overlap = i > 0 && s.transition !== "none";
             return (
-              <div
+              <motion.div
                 key={s.id}
+                initial={reduce ? false : { clipPath: "inset(0 100% 0 0 round 4px)" }}
+                animate={{ clipPath: "inset(0 0% 0 0 round 4px)" }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                 title={`${s.name} · ${tc(s.durationInFrames)}${overlap ? ` · ${s.transition} in` : ""}`}
                 className={cx(
                   "absolute inset-y-1.5 flex overflow-hidden rounded-[4px] border transition-colors duration-150",
@@ -177,9 +184,10 @@ export function Timeline() {
                   <span className={cx("font-mono text-[10px] tabular-nums", active ? "text-accent" : "text-faint")}>{pad2(i + 1)}</span>
                   <span className={cx("truncate text-[11.5px] font-medium", active ? "text-ink" : "text-muted")}>{s.name}</span>
                 </span>
-              </div>
+              </motion.div>
             );
           })}
+          </AnimatePresence>
         </div>
 
         {/* Layer rows for the selected scene: bar from entrance to scene out */}

@@ -12,6 +12,7 @@ import { ExportMenu } from "./Export";
 import { FromUrlMenu } from "./FromUrl";
 import { Inspector } from "./Inspector";
 import { LayersPanel, pad2, ScenesPanel } from "./Panels";
+import { LiveStrip } from "./Live";
 import { EditorProvider, focusFrame, ops, useEditor } from "./store";
 import { Timeline } from "./Timeline";
 import { cx, IconButton, isTyping, Segmented } from "./ui";
@@ -69,7 +70,7 @@ function EditorShell() {
 
   return (
     // Desktop: 3-column grid with a full-width timeline. Below lg: one scrolling column, panels behind tabs.
-    <div className="flex min-h-full flex-col bg-canvas lg:grid lg:h-full lg:grid-cols-[248px_minmax(0,1fr)_296px] lg:grid-rows-[44px_minmax(0,1fr)_auto]">
+    <div className="flex min-h-full flex-col bg-canvas lg:grid lg:h-full lg:grid-cols-[248px_minmax(0,1fr)_296px] lg:grid-rows-[44px_auto_minmax(0,1fr)_auto]">
       <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line bg-panel pr-2 pl-1.5 lg:col-span-3">
         <input
           aria-label="Project name"
@@ -94,12 +95,14 @@ function EditorShell() {
         </div>
       </header>
 
-      <aside className={cx("min-h-0 flex-col border-line bg-panel max-lg:order-4 max-lg:min-h-[420px] lg:col-start-1 lg:row-start-2 lg:flex lg:border-r", tab === "scenes" ? "flex" : "hidden")}>
+      <LiveStrip />
+
+      <aside className={cx("min-h-0 flex-col border-line bg-panel max-lg:order-4 max-lg:min-h-[420px] lg:col-start-1 lg:row-start-3 lg:flex lg:border-r", tab === "scenes" ? "flex" : "hidden")}>
         <ScenesPanel />
         <LayersPanel />
       </aside>
 
-      <main className="flex min-h-0 min-w-0 flex-col max-lg:order-1 max-lg:h-[46dvh] max-lg:min-h-[300px] lg:col-start-2 lg:row-start-2">
+      <main className="flex min-h-0 min-w-0 flex-col max-lg:order-1 max-lg:h-[46dvh] max-lg:min-h-[300px] lg:col-start-2 lg:row-start-3">
         <div className="flex h-9 shrink-0 items-center gap-3 border-b border-line px-3">
           <span className="font-mono text-[10.5px] text-muted tabular-nums">
             SCN {pad2(si + 1)}
@@ -138,11 +141,11 @@ function EditorShell() {
         <ChatEdit />
       </main>
 
-      <aside className={cx("min-h-0 overflow-y-auto border-line bg-panel max-lg:order-4 lg:col-start-3 lg:row-start-2 lg:block lg:border-l", tab === "inspector" ? "block" : "hidden")}>
+      <aside className={cx("min-h-0 overflow-y-auto border-line bg-panel max-lg:order-4 lg:col-start-3 lg:row-start-3 lg:block lg:border-l", tab === "inspector" ? "block" : "hidden")}>
         <Inspector />
       </aside>
 
-      <div className="max-lg:order-2 lg:col-span-3 lg:row-start-3">
+      <div className="max-lg:order-2 lg:col-span-3 lg:row-start-4">
         <Timeline />
       </div>
 
