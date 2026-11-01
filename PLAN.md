@@ -62,10 +62,20 @@ Run: `pnpm dev` (Next) + `pnpm render-server` (Node). Remotion Studio: `pnpm stu
 - [ ] `renderStill` → thumbnails / static posts
 
 ### Phase 5 — Distribution kit
-- [ ] Copy generator: X thread, LinkedIn post, Product Hunt tagline, TikTok/Reels captions + hashtags
-- [ ] Meme generator: trending templates as still compositions w/ product layers
-- [ ] Connect X + post video/thread
-- [ ] Multi-platform post via aggregator + schedule
+- [x] Distribution hub: 66 channels, 9 agents, automation level per channel (`/distribution`)
+- [ ] Copy agent: X thread, LinkedIn post, Product Hunt tagline, Reels/TikTok captions + hashtags
+- [ ] Meme agent: trending templates as still compositions w/ product layers
+- [ ] Direct posting: X, Bluesky, Threads, Mastodon, Telegram (official APIs)
+- [ ] Aggregator for TikTok/YouTube/Pinterest/LinkedIn page (audited apps avoid private-only lock) + schedule
+- [ ] Community/launch agents: draft-only queues for Reddit, Product Hunt, HN prep (no auto-posting there)
+
+#### Distribution research (2026-11-01, re-check before relying on it)
+- **Auto-post via official API:** X ($0.015/post, $0.20 with URL), LinkedIn profile, Instagram (own Business/Creator acct), Threads, Bluesky, Mastodon, Facebook page, Telegram, Discord (own server).
+- **Needs audit/review → use aggregator:** TikTok + YouTube (unaudited = private only), Pinterest (trial = sandbox), LinkedIn company page.
+- **Draft-only (no API or ToS forbids):** Reddit (new API access closed Oct 31 2026, public API shutting down by Mar 2027), Product Hunt, groups, Slack communities, DMs.
+- **Manual:** Hacker News bans AI-written/edited comments; agent only preps + monitors.
+- **Aggregators:** Zernio (ex-Late; 2 accounts free, then $6/acct), Upload-Post ($24/mo, 22 networks incl. TikTok), Postiz ($29/mo or self-host), Ayrshare ($149/mo).
+- **Agent stores = distribution to AI agents:** official MCP Registry → Smithery/Glama/PulseMCP, ChatGPT apps directory, Claude connectors + Claude Code plugins, Agent Skills (skills.sh), Cursor Marketplace, Google Connected Apps (preview), x402 Bazaar. Phase 7 ships Shipcast's own MCP server into these.
 
 ### Phase 6 — Variant engine (moat)
 - [ ] Generate N variants (hook / palette / CTA) from one project
