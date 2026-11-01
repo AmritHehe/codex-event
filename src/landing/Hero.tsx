@@ -137,7 +137,7 @@ export function Hero({ channels, agents }: { channels: number; agents: number })
                 href="/connect"
                 className="press group inline-flex h-12 items-center gap-2.5 rounded-[6px] bg-ink px-5 text-[16px] font-medium text-canvas hover:bg-ink/85"
               >
-                Connect your Claude
+                Connect your agent
                 <ArrowRightIcon size={16} weight="bold" className="transition-transform duration-200 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
               </Link>
               <p className="mt-3 max-w-[40ch] text-[14px] leading-[1.5] text-muted">

@@ -82,7 +82,7 @@ export function Hud() {
               Studio
             </Link>
             <Link href="/connect" className="press inline-flex h-9 items-center rounded-[6px] bg-ink px-3.5 text-[14px] font-medium text-canvas hover:bg-ink/85">
-              Connect<span className="max-sm:hidden">&nbsp;your Claude</span>
+              Connect<span className="max-sm:hidden">&nbsp;your agent</span>
             </Link>
           </nav>
         </div>

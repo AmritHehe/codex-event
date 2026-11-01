@@ -211,7 +211,7 @@ export class FileWorkspaceStore implements WorkspaceStore {
     return this.transaction(workspaceId, (data) => {
       if (!Number.isInteger(amount) || amount < 0) throw new WorkspaceError(400, "Invalid credit amount.");
       if (data.credits < amount) {
-        throw new WorkspaceError(402, `Not enough credits: this needs ${amount} and you have ${data.credits}. Connect your own agent (Claude Code, Codex or Gemini CLI) on /connect to keep going for free.`);
+        throw new WorkspaceError(402, `Not enough credits: this needs ${amount} and you have ${data.credits}. Connect your own agent (Codex, Claude Code or Gemini CLI) on /connect to keep going for free.`);
       }
       data.credits -= amount;
       return data.credits;

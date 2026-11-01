@@ -52,7 +52,7 @@ function Generating() {
 }
 
 /** F3.1: product URL in, first draft out. Landing hands it to the Studio; inside the Studio, `onDone` loads it directly. */
-/** `quiet`: secondary button when a stronger CTA sits above it (the hero's "Connect your Claude"). */
+/** `quiet`: secondary button when a stronger CTA sits above it (the hero's "Connect your agent"). */
 export function UrlForm({ onDone, compact = false, quiet = false }: { onDone?: (project: Project) => void; compact?: boolean; quiet?: boolean } = {}) {
   const id = useId();
   const router = useRouter();

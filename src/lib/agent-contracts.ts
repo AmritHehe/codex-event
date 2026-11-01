@@ -1,12 +1,12 @@
-// Contract for "bring your own agent": the user's CLI agent (Claude Code, Codex, Gemini CLI) connects to our
+// Contract for "bring your own agent": the user's CLI agent (Codex, Claude Code, Gemini CLI) connects to our
 // hosted MCP server and builds the film with the user's own subscription. The web app watches it happen.
 // Backend implements: /mcp, /api/workspace*, /api/projects/:id. Frontend consumes. Change only in a small PR.
 import { z } from "zod";
 import { aspectSchema, projectSchema, sceneSchema, themeSchema } from "@/video/schema";
 
 export const AGENT_CLIENTS = [
-  { id: "claude-code", name: "Claude Code", plan: "Claude Pro or Max", does: ["film", "copy"] },
   { id: "codex", name: "Codex CLI", plan: "ChatGPT Plus or Pro", does: ["film", "copy", "memes"] },
+  { id: "claude-code", name: "Claude Code", plan: "Claude Pro or Max", does: ["film", "copy"] },
   { id: "gemini-cli", name: "Gemini CLI", plan: "Google AI plan", does: ["film", "copy", "memes"] },
 ] as const;
 export type AgentClientId = (typeof AGENT_CLIENTS)[number]["id"];
