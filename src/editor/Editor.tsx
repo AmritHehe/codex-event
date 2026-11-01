@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LaunchVideo } from "@/video/LaunchVideo";
 import { ASPECTS, aspectSchema, FPS, projectDuration } from "@/video/schema";
+import { ChatEdit } from "./ChatEdit";
 import { Inspector } from "./Inspector";
 import { LayersPanel, pad2, ScenesPanel } from "./Panels";
 import { EditorProvider, focusFrame, ops, useEditor } from "./store";
@@ -130,6 +131,7 @@ function EditorShell() {
             />
           </div>
         </div>
+        <ChatEdit />
       </main>
 
       <aside className={cx("min-h-0 overflow-y-auto border-line bg-panel max-lg:order-4 lg:col-start-3 lg:row-start-2 lg:block lg:border-l", tab === "inspector" ? "block" : "hidden")}>
