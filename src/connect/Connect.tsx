@@ -27,6 +27,7 @@ const INSTALL: Record<AgentClientId, (url: string, token: string) => string[]> =
   codex: (url, token) => [`export SHIPCAST_TOKEN=${token}`, `codex mcp add shipcast --url ${url} --bearer-token-env-var SHIPCAST_TOKEN`],
   "gemini-cli": (url, token) => [`gemini mcp add --transport http --scope user shipcast ${url} --header "Authorization: Bearer ${token}"`],
 };
+const START: Record<AgentClientId, string> = { "claude-code": "claude", codex: "codex", "gemini-cli": "gemini" };
 const PLUGIN = ["/plugin marketplace add AmritHehe/codex-event", "/plugin install shipcast@shipcast"];
 const ASK = "Use the shipcast MCP server to build a launch film for my product.";
 
@@ -548,12 +549,16 @@ function ConnectStep({
   return (
     <>
       <p className={BODY}>
-        Paste this into your terminal. It adds Shipcast as an MCP server for {client.name}, signed with your workspace token.
+        Two steps in your terminal: add Shipcast as an MCP server, then start {client.name}. It calls Shipcast as it starts, and this page turns to
+        Connected.
       </p>
 
       <div className="mt-8 grid gap-3 md:mt-10">
         {token ? (
-          <Command title={`Terminal · ${client.name}`} lines={INSTALL[client.id](mcpUrl, token)} secret={token} />
+          <>
+            <Command title={`1 · Terminal · add Shipcast`} lines={INSTALL[client.id](mcpUrl, token)} secret={token} />
+            <Command title={`2 · Terminal · start ${client.name}`} size="md" lines={[START[client.id]]} />
+          </>
         ) : (
           <div className="rounded-[10px] border border-line bg-panel px-4 py-5 md:px-5">
             <p className="text-[16px] leading-[1.5] font-medium">Your connect command was shown once, before this page reloaded.</p>
@@ -595,7 +600,7 @@ function ConnectStep({
         done={!!conn}
         waiting={
           <>
-            Waiting for {client.name} to call Shipcast
+            Waiting for {client.name} to call Shipcast. Start it with <code className="font-mono text-ink">{START[client.id]}</code>
           </>
         }
         doneText={conn ? `Connected: ${agentLabel(conn)}` : ""}
@@ -612,7 +617,7 @@ function ConnectStep({
           <p className={LABEL}>
             Optional <span className="text-faint">·</span> Shipcast plugin for <span className="text-ink">/shipcast:launch</span>
           </p>
-          <Command title="Inside Claude Code" prompt=">" size="md" lines={PLUGIN} />
+          <Command title="Inside Claude Code, not your shell" prompt=">" size="md" lines={PLUGIN} />
         </div>
       )}
 
