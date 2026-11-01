@@ -160,16 +160,20 @@ function ImageLayer({ layer, theme, box, f, sceneFrames }: Props<"image">) {
   const frame = layer.frame ?? "browser";
   const bar = frame === "browser" ? 3.4 * u : 0;
   const zoom = layer.kenBurns ? interpolate(f, [0, sceneFrames], [1, 1.12], { extrapolateRight: "clamp" }) : 1;
-  const img = (
+  const imgStyle: React.CSSProperties = {
+    display: "block",
+    maxWidth: box.w * k,
+    maxHeight: box.h * k - bar,
+    transform: `scale(${zoom})`,
+    transformOrigin: "50% 30%",
+  };
+  // Inline data: images (the sample screenshot) need no loading; Remotion's <Img> decode() rejects some SVG data URIs
+  // and stalls the Player, so render them with a plain <img>. Remote images keep <Img> so renders wait for them.
+  // eslint-disable-next-line @next/next/no-img-element
+  const img = layer.src.startsWith("data:") ? <img src={layer.src} alt="" style={imgStyle} /> : (
     <Img
       src={layer.src}
-      style={{
-        display: "block",
-        maxWidth: box.w * k,
-        maxHeight: box.h * k - bar,
-        transform: `scale(${zoom})`,
-        transformOrigin: "50% 30%",
-      }}
+      style={imgStyle}
     />
   );
   if (frame === "none") return <div style={{ borderRadius: 1.6 * u, overflow: "hidden" }}>{img}</div>;

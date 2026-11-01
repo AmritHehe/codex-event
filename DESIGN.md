@@ -7,7 +7,7 @@ Read this before touching any UI. Every surface (landing, Studio, Distribution) 
 Shipcast makes video as code. The UI borrows the language of professional editing tools (timecode, tracks, playheads, frame counts, rulers) and sets it in a sharp, editorial light theme. Think Linear's precision crossed with a broadcast control room, printed on paper.
 
 - **Motif 1: timecode.** Monospace labels like `00:00:04:12`, `SCN 03`, `1920 × 1080`, `29.97 fps` used as real metadata, never decoration without meaning.
-- **Motif 2: tracks and playheads.** Thin horizontal lanes, a 1px orange playhead, tick rulers. Used where something actually has a position in time or progress.
+- **Motif 2: tracks and playheads.** Thin horizontal lanes, a 1px accent playhead, tick rulers. Used where something actually has a position in time or progress.
 - **Motif 3: hairlines over shadows.** Structure comes from 1px rules (`border-line`), not cards with drop shadows.
 
 ## Tokens (`src/app/globals.css`, do not edit in feature branches)
@@ -20,8 +20,8 @@ Shipcast makes video as code. The UI borrows the language of professional editin
 | `muted` #66666b | secondary text (AA on canvas) |
 | `faint` #a3a3a8 | tertiary, disabled only |
 | `line` #e2e2df | hairlines |
-| `accent` #ff4f17 | signal orange: playhead, live state, one highlight per view |
-| `accent-soft` #ffece5 | selected backgrounds |
+| `accent` #2f54eb | signal cobalt: playhead, live state, one highlight per view |
+| `accent-soft` #edf1ff | selected backgrounds |
 
 One accent. No gradients on UI chrome. No purple. The video content has its own themes; the UI never does.
 

@@ -3,7 +3,7 @@ import type { Theme } from "./schema";
 export const THEME_PRESETS: { name: string; theme: Theme }[] = [
   {
     name: "Paper",
-    theme: { background: "#F4F4F5", surface: "#FFFFFF", text: "#18181B", muted: "#62626B", accent: "#E8501C", accent2: "#7FA8FF", headingFont: "Bricolage Grotesque", bodyFont: "Inter" },
+    theme: { background: "#F4F4F5", surface: "#FFFFFF", text: "#18181B", muted: "#62626B", accent: "#2F54EB", accent2: "#9DB4FF", headingFont: "Bricolage Grotesque", bodyFont: "Inter" },
   },
   {
     name: "Volt",
