@@ -78,8 +78,11 @@ export function Hud() {
             <Link href="/distribution" className="rounded-[6px] px-3 py-2 text-[14px] text-muted transition-colors hover:text-ink max-md:hidden">
               Channels
             </Link>
-            <Link href="/studio" className="press inline-flex h-9 items-center rounded-[6px] bg-ink px-3.5 text-[14px] font-medium text-canvas">
-              <span className="max-sm:hidden">Open&nbsp;</span>Studio
+            <Link href="/studio" className="rounded-[6px] px-3 py-2 text-[14px] text-muted transition-colors hover:text-ink max-md:hidden">
+              Studio
+            </Link>
+            <Link href="/connect" className="press inline-flex h-9 items-center rounded-[6px] bg-ink px-3.5 text-[14px] font-medium text-canvas hover:bg-ink/85">
+              Connect<span className="max-sm:hidden">&nbsp;your Claude</span>
             </Link>
           </nav>
         </div>
