@@ -9,6 +9,7 @@ import { projectSchema, type Project } from "@/video/schema";
 import { PUBLISH_CHANNELS } from "@/lib/distribution-contracts";
 import { CHANNELS } from "./channels";
 import { ChannelLogo } from "./icons";
+import type { Community } from "./CommunityQueue";
 import { graphemes, isPublishable, type PublishId, type Publishing } from "./Publisher";
 import { Chip } from "./ui";
 
@@ -81,12 +82,15 @@ export function KitSheet({
   onRemove,
   pub,
   onPublish,
+  onQueue,
 }: {
   picked: string[];
   kit: Kit;
   onRemove: (id: string) => void;
   pub: Publishing;
   onPublish: (id: PublishId) => void;
+  /** Reddit and Product Hunt drafts go to the community queue, since those are posted by hand. */
+  onQueue: (channelId: Community, text: string) => void;
 }) {
   const [{ project, saved }] = useState(loadProject);
   const pending = kit.status === "pending";
@@ -159,6 +163,7 @@ export function KitSheet({
             const target = PUBLISH_CHANNELS.find((t) => t.id === d.channelId);
             const receipt = isPublishable(d.channelId) ? pub.receipts[d.channelId] : undefined;
             const n = target ? graphemes(d.text) : d.text.length;
+            const community = d.channelId === "reddit" || d.channelId === "product-hunt" ? d.channelId : null;
             return (
               <div key={d.channelId} className="flex flex-col gap-2.5">
                 <div className="flex items-center gap-3">
@@ -185,6 +190,11 @@ export function KitSheet({
                     {target ? `${n} / ${target.limit}` : `${n} chars`}
                   </span>
                   <CopyButton text={d.text} name={name} />
+                  {community && (
+                    <button onClick={() => onQueue(community, d.text)} aria-label={`Send ${name} draft to the community queue`} className="press h-7 rounded-md bg-ink px-2.5 font-mono text-[11px] tracking-[0.08em] text-canvas uppercase">
+                      Queue
+                    </button>
+                  )}
                   {target && (
                     <button onClick={() => onPublish(target.id)} aria-label={`Publish ${name} draft`} className="press h-7 rounded-md bg-ink px-2.5 font-mono text-[11px] tracking-[0.08em] text-canvas uppercase">
                       {target.mode === "aggregator" ? "Publish or schedule" : "Publish"}

@@ -8,6 +8,7 @@ import { ASSET_LABEL, AUTOMATION, CATEGORIES, CHANNELS, type Automation, type Ca
 import { AgentGlyph, ChannelLogo } from "./icons";
 import { KitSheet, Tick, useKit } from "./Kit";
 import { MemeSheet } from "./MemeAgent";
+import { QueueSheet, isCommunity, useCommunityQueue } from "./CommunityQueue";
 import { ConnectionsSheet, PublishSheet, connectionSummary, isPublishable, usePublishing, type PublishId } from "./Publisher";
 import { Fact, label, mono, note, pad } from "./ui";
 
@@ -272,11 +273,12 @@ type Panel =
   | { kind: "kit" }
   | { kind: "connections"; back?: Panel }
   | { kind: "publish"; id: PublishId; back?: Panel }
-  | { kind: "meme" };
+  | { kind: "meme" }
+  | { kind: "queue"; focus?: string; back?: Panel };
 
 const BYID = Object.fromEntries(CHANNELS.map((c) => [c.id, c]));
 const panelTitle = (p: Panel): string =>
-  p.kind === "channel" ? p.c.name : p.kind === "kit" ? "Launch kit" : p.kind === "connections" ? "Connections" : p.kind === "meme" ? "Meme composer" : `Publish to ${BYID[p.id].name}`;
+  p.kind === "channel" ? p.c.name : p.kind === "kit" ? "Launch kit" : p.kind === "connections" ? "Connections" : p.kind === "meme" ? "Meme composer" : p.kind === "queue" ? "Community queue" : `Publish to ${BYID[p.id].name}`;
 const backLabel = (p?: Panel) => (!p ? undefined : p.kind === "kit" ? "Back to kit" : p.kind === "channel" ? `Back to ${p.c.name}` : "Back");
 
 export function Hub() {
@@ -285,6 +287,7 @@ export function Hub() {
   const [picked, setPicked] = useState<string[]>([]);
   const kit = useKit();
   const pub = usePublishing();
+  const queue = useCommunityQueue();
   const [instant, setInstant] = useState(false);
   const search = useRef<HTMLInputElement>(null);
   const set = (patch: Partial<Filters>) => setF((prev) => ({ ...prev, ...patch }));
@@ -307,6 +310,31 @@ export function Hub() {
   const close = (keyboard: boolean) => {
     setInstant(keyboard);
     setOpen(null);
+  };
+
+  /** The channel sheet's second action: hand-posted communities go to the queue, API channels to publishing. */
+  const channelAction = (from: Panel & { kind: "channel" }) => {
+    const id = from.c.id;
+    const style = "press flex h-10 items-center gap-2 rounded-md border border-line px-4 text-[14px] font-medium hover:border-ink disabled:opacity-40";
+    if (isCommunity(id))
+      return (
+        <button
+          onClick={() => setOpen({ kind: "queue", focus: queue.add(id, kit.drafts.find((d) => d.channelId === id)?.text), back: from })}
+          disabled={!queue.ready}
+          className={style}
+        >
+          Add to community queue
+          <ArrowRightIcon size={14} />
+        </button>
+      );
+    if (isPublishable(id))
+      return (
+        <button onClick={() => setOpen({ kind: "publish", id, back: from })} className={style}>
+          Publish to {from.c.name}
+          <ArrowUpRightIcon size={14} />
+        </button>
+      );
+    return null;
   };
 
   // "/" jumps to search from anywhere outside a text field.
@@ -335,6 +363,9 @@ export function Hub() {
               {connectionSummary(pub) && <span className="text-accent">{connectionSummary(pub)}</span>}
             </BarButton>
             <BarButton onClick={(keyboard) => show({ kind: "meme" }, keyboard)}>Meme</BarButton>
+            <BarButton onClick={(keyboard) => show({ kind: "queue" }, keyboard)}>
+              Queue <span className="text-muted">{pad(queue.drafts.length)}</span>
+            </BarButton>
           </span>
         </div>
 
@@ -492,6 +523,9 @@ export function Hub() {
                         {a.id === "meme" && (
                           <ToolLink onClick={(keyboard) => show({ kind: "meme" }, keyboard)}>Open the meme composer</ToolLink>
                         )}
+                        {a.id === "community" && (
+                          <ToolLink onClick={(keyboard) => show({ kind: "queue" }, keyboard)}>Open the community queue</ToolLink>
+                        )}
                       </div>
                     </header>
                     <ul>
@@ -542,24 +576,23 @@ export function Hub() {
           <Drawer key="sheet" title={panelTitle(open)} wide={open.kind === "meme"} instant={instant} onClose={close}>
             {open.kind === "meme" ? (
               <MemeSheet />
+            ) : open.kind === "queue" ? (
+              <QueueSheet key={open.focus} q={queue} focus={open.focus} back={open.back && (() => setOpen(open.back!))} />
             ) : open.kind === "kit" ? (
-              <KitSheet picked={picked} kit={kit} onRemove={pick} pub={pub} onPublish={(id) => setOpen({ kind: "publish", id, back: open })} />
+              <KitSheet
+                picked={picked}
+                kit={kit}
+                onRemove={pick}
+                pub={pub}
+                onPublish={(id) => setOpen({ kind: "publish", id, back: open })}
+                onQueue={(id, text) => setOpen({ kind: "queue", focus: queue.add(id, text), back: open })}
+              />
             ) : open.kind === "channel" ? (
               <ChannelSheet
                 c={open.c}
                 picked={picked.includes(open.c.id)}
                 onPick={() => pick(open.c.id)}
-                actions={
-                  isPublishable(open.c.id) && (
-                    <button
-                      onClick={() => setOpen({ kind: "publish", id: open.c.id as PublishId, back: open })}
-                      className="press flex h-10 items-center gap-2 rounded-md border border-line px-4 text-[14px] font-medium hover:border-ink"
-                    >
-                      Publish to {open.c.name}
-                      <ArrowUpRightIcon size={14} />
-                    </button>
-                  )
-                }
+                actions={channelAction(open)}
               />
             ) : open.kind === "connections" ? (
               <ConnectionsSheet pub={pub} onPublish={(id) => setOpen({ kind: "publish", id, back: open })} back={open.back && (() => setOpen(open.back!))} />

@@ -27,16 +27,16 @@ export function Fact({ name, children }: { name: string; children: React.ReactNo
 export function SheetHead({ slug, title, back, children }: { slug: React.ReactNode; title: string; back?: () => void; children?: React.ReactNode }) {
   return (
     <>
-      <p className={`${label} flex min-h-9 items-center gap-3 pr-12`}>
+      <p className={`${label} flex items-center gap-3 pr-12`}>
         {back && (
-          <button onClick={back} className={`${mono} press -ml-1 flex h-9 items-center gap-1.5 rounded-md px-1 text-ink hover:bg-hover`}>
+          <button onClick={back} className={`${mono} press -my-2.5 -ml-1 flex h-9 items-center gap-1.5 rounded-md px-1 text-ink hover:bg-hover`}>
             <ArrowLeftIcon size={14} />
             Back
           </button>
         )}
         <span className="min-w-0 truncate">{slug}</span>
       </p>
-      <h2 className="mt-8 text-[clamp(32px,6vw,44px)] leading-[0.95] font-semibold tracking-[-0.045em] text-balance">{title}</h2>
+      <h2 className="mt-10 text-[clamp(32px,6vw,44px)] leading-[0.95] font-semibold tracking-[-0.045em] text-balance">{title}</h2>
       {children && <div className="mt-4 max-w-[52ch] text-[16px] leading-[1.55] text-muted">{children}</div>}
     </>
   );
