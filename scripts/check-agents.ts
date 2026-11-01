@@ -18,6 +18,9 @@ import * as briefRoute from "../src/app/api/workspace/brief/route";
 import * as eventsRoute from "../src/app/api/workspace/events/route";
 import * as workspaceRoute from "../src/app/api/workspace/route";
 import * as mcpRoute from "../src/app/mcp/route";
+import * as libraryRoute from "../src/app/api/workspace/library/route";
+import * as assetRoute from "../src/app/api/workspace/assets/[id]/route";
+import { libraryResponse } from "../src/lib/library-contracts";
 import { ApiError } from "../src/server/http";
 import { providers } from "../src/server/providers";
 import { parseScrape } from "../src/server/scrape";
@@ -408,4 +411,43 @@ test("MCP research_product bills 1 credit, refunds failures, and get_brief carri
     if (key === undefined) delete process.env.AI_GATEWAY_API_KEY; else process.env.AI_GATEWAY_API_KEY = key;
     await client.close();
   }
+});
+
+// ---------- dashboard library ----------
+test("library lists projects newest first with drafts and asset urls; asset bytes only for the owner", async () => {
+  const store = workspaces();
+  const { workspace: ws, token } = await store.create();
+  const cookie = `shipcast_ws=${token}`;
+  const get = (path: string, c?: string) => new Request(`http://local${path}`, { headers: c ? { cookie: c } : {} });
+  const assetGet = (id: string, c?: string) => assetRoute.GET(get(`/api/workspace/assets/${id}`, c), { params: Promise.resolve({ id }) });
+  const bytes = Buffer.from(PNG.split(",")[1], "base64");
+  const older = await store.createProject(ws.id, { name: "Old", url: "https://old.dev", aspect: sampleProject.aspect, theme: sampleProject.theme });
+  await new Promise((r) => setTimeout(r, 5));
+  const newer = await store.createProject(ws.id, { name: "New", url: "https://new.dev", aspect: sampleProject.aspect, theme: sampleProject.theme });
+  const png = await store.saveAsset(ws.id, newer.id, { kind: "meme", caption: "hi", bytes, type: "image/png" });
+  const remote = await store.saveAsset(ws.id, newer.id, { kind: "logo", url: "https://cdn.example.com/logo.png" });
+  await store.saveDrafts(ws.id, newer.id, [{ channelId: "x", text: "Ship it", hashtags: ["#launch"] }]);
+
+  assert.equal((await libraryRoute.GET(get("/api/workspace/library"), {} as never)).status, 401);
+  const lib = libraryResponse.parse(await (await libraryRoute.GET(get("/api/workspace/library", cookie), {} as never)).json());
+  assert.equal(lib.credits, 20);
+  assert.deepEqual(lib.projects.map((p) => p.id), [newer.id, older.id]);
+  assert.equal(lib.projects[0].url, "https://new.dev");
+  assert.deepEqual(lib.projects[0].drafts, [{ channelId: "x", text: "Ship it", hashtags: ["#launch"] }]);
+  assert.deepEqual(lib.projects[0].assets, [
+    { id: png.id, kind: "meme", caption: "hi", url: `/api/workspace/assets/${png.id}` },
+    { id: remote.id, kind: "logo", url: "https://cdn.example.com/logo.png" },
+  ]);
+
+  const served = await assetGet(png.id, cookie);
+  assert.equal(served.status, 200);
+  assert.equal(served.headers.get("content-type"), "image/png");
+  assert.equal(served.headers.get("cache-control"), "private, max-age=3600");
+  assert.equal(served.headers.get("x-content-type-options"), "nosniff");
+  assert.deepEqual(Buffer.from(await served.arrayBuffer()), bytes);
+
+  const other = await store.create();
+  assert.equal((await assetGet(png.id, `shipcast_ws=${other.token}`)).status, 404, "other workspaces cannot read it");
+  assert.equal((await assetGet(png.id)).status, 401);
+  for (const bad of ["../workspace.json", "a_xyz", remote.id]) assert.equal((await assetGet(bad, cookie)).status, 404, bad);
 });
