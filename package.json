@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "check:distribution": "tsx --test scripts/check-distribution.ts",
     "studio": "remotion studio src/video/index.ts",
     "check:video": "tsx scripts/check-video.ts",
     "check:ai": "tsx --test scripts/check-ai.ts"

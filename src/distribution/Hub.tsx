@@ -7,6 +7,7 @@ import { AGENTS, type AgentId } from "./agents";
 import { ASSET_LABEL, AUTOMATION, CATEGORIES, CHANNELS, type Automation, type CategoryId, type Channel } from "./channels";
 import { AgentGlyph, ChannelLogo } from "./icons";
 import { KitSheet, Tick, useKit } from "./Kit";
+import { DistributionTools } from "./DistributionTools";
 
 const EASE_UI = [0.23, 1, 0.32, 1] as const;
 const EASE_ENTER = [0.16, 1, 0.3, 1] as const;
@@ -319,6 +320,8 @@ export function Hub() {
             <p className={note}>Platform rules researched {RESEARCHED}. They change often, so check before you rely on one.</p>
           </div>
         </header>
+
+        <DistributionTools />
 
         <div role="group" aria-label="Filter by automation" className="grid grid-cols-3 border-y border-line">
           {LEVELS.map((a, i) => {

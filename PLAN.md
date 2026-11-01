@@ -88,11 +88,13 @@ Phase 3 implementation is complete. Provider calls require the server keys in `.
 
 ### Phase 5: Distribution kit
 - [x] Distribution hub: 66 channels, 9 agents, automation level per channel (`/distribution`)
-- [ ] (backend) Copy agent: X thread, LinkedIn post, Product Hunt tagline, Reels/TikTok captions + hashtags
-- [ ] (frontend) Meme agent: trending templates as still compositions w/ product layers
-- [ ] (backend) Direct posting: X, Bluesky, Threads, Mastodon, Telegram (official APIs)
-- [ ] (backend) Aggregator for TikTok/YouTube/Pinterest/LinkedIn page (audited apps avoid private-only lock) + schedule
-- [ ] (backend) Community/launch agents: draft-only queues for Reddit, Product Hunt, HN prep (no auto-posting there)
+- [x] (backend) Copy agent: X thread, LinkedIn post, Product Hunt tagline, Reels/TikTok captions + hashtags
+- [x] (frontend) Meme agent: trending templates as still compositions w/ product layers
+- [x] (backend) Direct posting: X, Bluesky, Threads, Mastodon, Telegram (official APIs)
+- [x] (backend) Aggregator for TikTok/YouTube/Pinterest/LinkedIn page (audited apps avoid private-only lock) + schedule
+- [x] (backend) Community/launch agents: draft-only queues for Reddit, Product Hunt, HN prep (no auto-posting there)
+
+Phase 5 implementation: the copy agent ships in the Phase 3 PR. The distribution PR adds the other workspace tools and adapters; social credentials are required for live posting. Scheduling runs through Ayrshare; community queues stay local and manual. See `docs/distribution.md`.
 
 #### Distribution research (2026-11-01, re-check before relying on it)
 - **Auto-post via official API:** X ($0.015/post, $0.20 with URL), LinkedIn profile, Instagram (own Business/Creator acct), Threads, Bluesky, Mastodon, Facebook page, Telegram, Discord (own server).
