@@ -97,6 +97,10 @@ test("kit deduplicates requested channels and rejects missing, duplicate or unsu
   await assert.rejects(generateKit(input, signal, deps({ posts: [posts[0], posts[0]] })), ApiError);
   await assert.rejects(generateKit(input, signal, deps({ posts: [posts[0]] })), ApiError);
   await assert.rejects(generateKit({ ...input, channels: ["unknown"] }, signal, deps({ posts })), (e: Error) => e instanceof ApiError && e.status === 400);
+  // Any catalog channel works (briefed from its research notes); manual-only channels are refused.
+  const reddit = [{ channelId: "reddit", text: "We built this after hitting the problem" }];
+  assert.deepEqual(await generateKit({ project: sampleProject, channels: ["reddit"] }, signal, deps({ posts: reddit })), { posts: reddit });
+  await assert.rejects(generateKit({ project: sampleProject, channels: ["hacker-news"] }, signal, deps({ posts })), (e: Error) => e instanceof ApiError && e.status === 400);
 });
 
 test("actual API routes validate requests and responses end to end with stubbed providers", async () => {
