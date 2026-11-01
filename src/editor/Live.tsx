@@ -117,6 +117,21 @@ export function LiveStrip() {
   });
   useInterval(building && !stream, refresh, 3000);
 
+  // Save the user's edits back so the agent's get_project sees them. Only edits made on top of this project's agent
+  // version: the agent's own version (=== applied) is never echoed, and nothing is sent before it has loaded.
+  useEffect(() => {
+    const p = state.project;
+    if (!projectId || applied.current?.id !== projectId || p === applied.current) return;
+    const t = setTimeout(() => {
+      fetch(`/api/projects/${encodeURIComponent(projectId)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project: p }),
+      }).catch(() => {}); // offline: the local autosave still has it, the next edit retries
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [state.project, projectId]);
+
   // Park the playhead on the scene that just landed, once the player has the new duration.
   useEffect(() => {
     if (!seekTo.current || state.project !== applied.current) return;
