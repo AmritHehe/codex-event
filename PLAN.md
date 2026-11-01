@@ -62,15 +62,17 @@ The contract in `src/lib/contracts.ts` (zod schemas + `postJson`) is the handsha
 
 ### Phase 3: AI generation
 **Backend (collaborator)**
-- [ ] B3.1 Firecrawl via Vercel Marketplace (`vercel integration add firecrawl`): URL → markdown, screenshot, brand colors, logo (`src/server/scrape.ts`)
-- [ ] B3.2 `POST /api/generate` per `generateRequest`/`generateResponse`: scrape → AI SDK structured output (`projectSchema`) via AI Gateway → validated project. Use the scraped screenshot URL in the image layer
-- [ ] B3.3 `POST /api/edit` per `editRequest`/`editResponse`: instruction + project → new project + one-line summary. Must keep ids of untouched layers stable
-- [ ] B3.4 `POST /api/kit` per `kitRequest`/`kitResponse`: per-channel copy (X thread, LinkedIn, Product Hunt tagline, captions)
+- [x] B3.1 Firecrawl via Vercel Marketplace (`vercel integration add firecrawl`): URL → markdown, screenshot, brand colors, logo (`src/server/scrape.ts`)
+- [x] B3.2 `POST /api/generate` per `generateRequest`/`generateResponse`: scrape → AI SDK structured output (`projectSchema`) via AI Gateway → validated project. Use the scraped screenshot URL in the image layer
+- [x] B3.3 `POST /api/edit` per `editRequest`/`editResponse`: instruction + project → new project + one-line summary. Must keep ids of untouched layers stable
+- [x] B3.4 `POST /api/kit` per `kitRequest`/`kitResponse`: per-channel copy (X thread, LinkedIn, Product Hunt tagline, captions)
 
 **Frontend (us)**
-- [ ] F3.1 Landing + Studio "paste your URL" entry with generating state (timeline-style progress)
-- [ ] F3.2 Studio chat-edit bar: instruction → `/api/edit` → undoable update, summary toast
-- [ ] F3.3 Kit panel in Distribution: pick channels → `/api/kit` → editable drafts with copy buttons
+- [x] F3.1 Landing + Studio "paste your URL" entry with generating state (timeline-style progress)
+- [x] F3.2 Studio chat-edit bar: instruction → `/api/edit` → undoable update, summary toast
+- [x] F3.3 Kit panel in Distribution: pick channels → `/api/kit` → editable drafts with copy buttons
+
+Phase 3 implementation is complete. Provider calls require the server keys in `.env.example`; automated API and browser checks use provider fixtures. See README for setup and manual verification.
 
 ### Phase 4: Render & export
 **Backend (collaborator)**: render server (`server/render.ts`, `pnpm render-server`, port 3200)

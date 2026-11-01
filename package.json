@@ -8,13 +8,15 @@
     "start": "next start",
     "lint": "eslint",
     "studio": "remotion studio src/video/index.ts",
-    "check:video": "tsx scripts/check-video.ts"
+    "check:video": "tsx scripts/check-video.ts",
+    "check:ai": "tsx --test scripts/check-ai.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
     "@remotion/google-fonts": "4.0.539",
     "@remotion/player": "^4.0.539",
     "@remotion/transitions": "4.0.539",
+    "ai": "7.0.159",
     "motion": "^14.9.0",
     "next": "16.4.3",
     "react": "19.3.0",

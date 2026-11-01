@@ -3,9 +3,10 @@
 import type { PlayerRef } from "@remotion/player";
 import { createContext, useContext, useEffect, useReducer, useRef, type RefObject } from "react";
 import { MOCK_SCREENSHOT, sampleProject } from "@/video/sample";
+import { PROJECT_STORAGE_KEY } from "@/lib/project-storage";
 import { autoDelay, projectSchema, sceneStarts, TRANSITION_FRAMES, type Layer, type LayerType, type Project, type Scene } from "@/video/schema";
 
-const STORAGE_KEY = "shipcast:project";
+const STORAGE_KEY = PROJECT_STORAGE_KEY;
 const HISTORY_LIMIT = 100;
 const COALESCE_MS = 800;
 
