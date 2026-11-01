@@ -31,4 +31,4 @@ Node 22+, pnpm.
 - Open a PR into `main`. CI runs typecheck, lint and the engine self-check. Another person reviews and merges.
 - Don't change `src/video/schema.ts` in a feature PR without calling it out in the PR description: it is shared by the editor, AI generation and the render server.
 
-See **Phase 4** in `PLAN.md` for the render-server work package.
+See "Two tracks" in `PLAN.md`: backend items are prefixed B, frontend items F. API shapes live in `src/lib/contracts.ts`. UI rules live in `DESIGN.md`.

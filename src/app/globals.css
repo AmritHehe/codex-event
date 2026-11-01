@@ -3,15 +3,15 @@
 /* Light-only by product decision. One accent (signal orange), zinc neutrals.
    Radius system: controls 8px, panels 12px. */
 @theme inline {
-  --color-canvas: #f4f4f5;
-  --color-panel: #fcfcfd;
-  --color-ink: #18181b;
-  --color-muted: #6b6b74;
-  --color-faint: #a1a1aa;
-  --color-line: #e6e6e9;
-  --color-hover: #efeff1;
-  --color-accent: #e8501c;
-  --color-accent-soft: #fdeee8;
+  --color-canvas: #f4f4f2;
+  --color-panel: #fbfbfa;
+  --color-ink: #111111;
+  --color-muted: #66666b;
+  --color-faint: #a3a3a8;
+  --color-line: #e2e2df;
+  --color-hover: #ebebe8;
+  --color-accent: #ff4f17;
+  --color-accent-soft: #ffece5;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-bricolage);

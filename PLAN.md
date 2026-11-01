@@ -50,46 +50,47 @@ Run: `pnpm dev` (Next) + `pnpm render-server` (Node). Remotion Studio: `pnpm stu
 - [x] Theme panel (brand colors/fonts) + aspect switcher
 - [x] Undo/redo + autosave to localStorage
 
-### Phase 3 — AI generation · owner: Amrit (+ Claude)
-- [ ] Firecrawl integration: URL → content + screenshot + brand
-- [ ] `POST /api/generate`: scraped data → project JSON (structured output, zod-validated)
-- [ ] Chat edit: "make hook punchier, dark theme" → patched project JSON
-- [ ] Landing input: paste URL → land in editor with generated video
+## Two tracks, worked in parallel
 
-### Phase 4 — Render & export · owner: collaborator (via PR)
-Runs in parallel with Phase 3. Self-contained: a Node service plus one button in the Studio.
-Branch `feat/render-server`, open a PR into `main`, we review and merge. Split into 2 PRs if easier (server first, then UI).
+| | Backend track: collaborator | Frontend track: Amrit + Claude |
+|---|---|---|
+| Owns | `server/`, `src/app/api/`, `src/server/` | `src/app/page.tsx`, `src/app/(app)/`, `src/landing/`, `src/editor/`, `src/distribution/`, `src/components/` |
+| Shared, change only in a small separate PR | `src/lib/contracts.ts`, `src/video/schema.ts`, `src/app/globals.css` tokens | same |
+| Flow | branch `feat/<thing>` → PR → review → merge | same |
 
-**PR 1: render server** (`server/render.ts`, run with `pnpm render-server`, port 3200)
-- [ ] Bundle `src/video/index.ts` once at startup (`@remotion/bundler`), reuse the bundle for every job
-- [ ] `POST /render` body `{ project: Project }` → validate with `projectSchema` (400 on failure) → `{ jobId }`
-- [ ] `GET /render/:jobId` → `{ status: "queued" | "rendering" | "done" | "error", progress: 0..1, url?, error? }`
-- [ ] `GET /files/:jobId.mp4` serves the result (local `out/` folder, gitignored)
-- [ ] Composition id `LaunchVideo`, inputProps `{ project }`; `selectComposition` picks up size/length from `calculateMetadata` in `src/video/Root.tsx`
-- [ ] Jobs run one at a time (in-memory queue is fine); CORS allows `http://localhost:3000`
-- [ ] Framework: plain `node:http` or Hono, your call. Add `@remotion/bundler` + `@remotion/renderer` pinned to the same version as `remotion`
+The contract in `src/lib/contracts.ts` (zod schemas + `postJson`) is the handshake: the frontend calls these endpoints and shows real loading/error states; the backend makes them work. Nobody waits on anybody.
 
-**PR 2: export UI**
-- [ ] "Export" button in the Studio header (`src/editor/Editor.tsx`), next to Distribute
-- [ ] Popover: pick formats (16:9 / 9:16 / 1:1, current one preselected) → one job each → progress bars → download links
-- [ ] Render server URL from `NEXT_PUBLIC_RENDER_URL` (default `http://localhost:3200`); clear error if it isn't running
-- [ ] Follow the existing UI kit in `src/editor/ui.tsx` (light theme, `press` class, 8px controls)
+### Phase 3: AI generation
+**Backend (collaborator)**
+- [ ] B3.1 Firecrawl via Vercel Marketplace (`vercel integration add firecrawl`): URL → markdown, screenshot, brand colors, logo (`src/server/scrape.ts`)
+- [ ] B3.2 `POST /api/generate` per `generateRequest`/`generateResponse`: scrape → AI SDK structured output (`projectSchema`) via AI Gateway → validated project. Use the scraped screenshot URL in the image layer
+- [ ] B3.3 `POST /api/edit` per `editRequest`/`editResponse`: instruction + project → new project + one-line summary. Must keep ids of untouched layers stable
+- [ ] B3.4 `POST /api/kit` per `kitRequest`/`kitResponse`: per-channel copy (X thread, LinkedIn, Product Hunt tagline, captions)
 
-**Done when**
-- [ ] Sample project renders to MP4 in all three formats and plays with the same timing as the Player
-- [ ] Invalid project JSON returns 400, and a crashed render shows `status: "error"` instead of hanging
-- [ ] CI green; screenshots or a clip in the PR
-- [ ] Don't edit `src/video/schema.ts`; if you need to, call it out in the PR
+**Frontend (us)**
+- [ ] F3.1 Landing + Studio "paste your URL" entry with generating state (timeline-style progress)
+- [ ] F3.2 Studio chat-edit bar: instruction → `/api/edit` → undoable update, summary toast
+- [ ] F3.3 Kit panel in Distribution: pick channels → `/api/kit` → editable drafts with copy buttons
 
-Later (not required): `renderStill` endpoint for thumbnails and static posts.
+### Phase 4: Render & export
+**Backend (collaborator)**: render server (`server/render.ts`, `pnpm render-server`, port 3200)
+- [ ] B4.1 Bundle `src/video/index.ts` once at startup (`@remotion/bundler`), reuse for every job
+- [ ] B4.2 `POST /render` per `renderRequest` → validate (400 on failure) → `renderJob`
+- [ ] B4.3 `GET /render/:jobId` → `renderJob`; `GET /files/:jobId.mp4` serves the result from `out/` (gitignored)
+- [ ] B4.4 Composition `LaunchVideo`, inputProps `{ project }`; `selectComposition` reads size/length from `calculateMetadata` in `src/video/Root.tsx`
+- [ ] B4.5 One job at a time (in-memory queue is fine); CORS for `http://localhost:3000`. `node:http` or Hono. Pin `@remotion/bundler` + `@remotion/renderer` to the `remotion` version
+- Done when: sample renders in 16:9, 9:16, 1:1 with Player-identical timing; bad JSON → 400; a crashed render → `status: "error"`, never hangs
 
-### Phase 5 — Distribution kit
+**Frontend (us)**
+- [ ] F4.1 Export popover in Studio: formats → one job each → progress on a timeline track → download (uses `RENDER_URL`)
+
+### Phase 5: Distribution kit
 - [x] Distribution hub: 66 channels, 9 agents, automation level per channel (`/distribution`)
-- [ ] Copy agent: X thread, LinkedIn post, Product Hunt tagline, Reels/TikTok captions + hashtags
-- [ ] Meme agent: trending templates as still compositions w/ product layers
-- [ ] Direct posting: X, Bluesky, Threads, Mastodon, Telegram (official APIs)
-- [ ] Aggregator for TikTok/YouTube/Pinterest/LinkedIn page (audited apps avoid private-only lock) + schedule
-- [ ] Community/launch agents: draft-only queues for Reddit, Product Hunt, HN prep (no auto-posting there)
+- [ ] (backend) Copy agent: X thread, LinkedIn post, Product Hunt tagline, Reels/TikTok captions + hashtags
+- [ ] (frontend) Meme agent: trending templates as still compositions w/ product layers
+- [ ] (backend) Direct posting: X, Bluesky, Threads, Mastodon, Telegram (official APIs)
+- [ ] (backend) Aggregator for TikTok/YouTube/Pinterest/LinkedIn page (audited apps avoid private-only lock) + schedule
+- [ ] (backend) Community/launch agents: draft-only queues for Reddit, Product Hunt, HN prep (no auto-posting there)
 
 #### Distribution research (2026-11-01, re-check before relying on it)
 - **Auto-post via official API:** X ($0.015/post, $0.20 with URL), LinkedIn profile, Instagram (own Business/Creator acct), Threads, Bluesky, Mastodon, Facebook page, Telegram, Discord (own server).
@@ -113,3 +114,8 @@ Later (not required): `renderStill` endpoint for thumbnails and static posts.
 - [x] Landing page + pitch (live engine hero, bento, channels, agents)
 - [ ] Deploy web to Vercel; render server local/remote
 - [ ] Demo script: judge's URL → video in 60s → chat edit → post live
+
+### Phase 9: Frontend redesign to DESIGN.md (frontend track)
+- [ ] Landing: timeline-as-page concept, scroll playhead HUD
+- [ ] Studio: pro editing-tool chrome (tracks, timecode, hairlines)
+- [ ] Distribution: editorial index of channels and agents
