@@ -7,6 +7,7 @@ const required: Record<PublishInput["channel"], string[]> = {
   threads: ["THREADS_USER_ID", "THREADS_ACCESS_TOKEN"], mastodon: ["MASTODON_BASE_URL", "MASTODON_ACCESS_TOKEN"],
   telegram: ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"], tiktok: ["AYRSHARE_API_KEY"],
   "youtube-shorts": ["AYRSHARE_API_KEY"], pinterest: ["AYRSHARE_API_KEY"], "linkedin-page": ["AYRSHARE_API_KEY"],
+  instagram: ["AYRSHARE_API_KEY"],
 };
 export const connections = () => PUBLISH_CHANNELS.map((c) => ({ ...c, configured: required[c.id].every((key) => !!process.env[key]) }));
 export function requireConnection(channel: PublishInput["channel"]) {
@@ -48,11 +49,12 @@ export async function publish(input: PublishInput, signal: AbortSignal, fetcher:
     const data = z.object({ ok: z.literal(true), result: z.object({ message_id: z.number() }) }).parse(await post(`https://api.telegram.org/bot${env("TELEGRAM_BOT_TOKEN")}/sendMessage`, { chat_id: env("TELEGRAM_CHAT_ID"), text: input.text }));
     return { ...receipt, providerId: String(data.result.message_id) };
   }
-  const platform = { tiktok: "tiktok", "youtube-shorts": "youtube", pinterest: "pinterest", "linkedin-page": "linkedin" }[input.channel];
+  const platform = { tiktok: "tiktok", "youtube-shorts": "youtube", pinterest: "pinterest", "linkedin-page": "linkedin", instagram: "instagram" }[input.channel];
   const body = {
     post: input.text, platforms: [platform], idempotencyKey: input.requestId,
     ...(input.mediaUrl && { mediaUrls: [input.mediaUrl] }), ...(input.scheduleAt && { scheduleDate: input.scheduleAt }),
     ...(input.channel === "youtube-shorts" && { youTubeOptions: { title: input.title, shorts: true, visibility: input.visibility } }),
+    ...(input.channel === "instagram" && input.mediaUrl && new URL(input.mediaUrl).pathname.toLowerCase().endsWith(".mp4") && { instagramOptions: { reels: true } }),
     ...(input.channel === "pinterest" && { pinterestOptions: { boardId: input.boardId, title: input.title } }),
   };
   const result = z.object({ status: z.literal("success"), id: z.string(), errors: z.array(z.unknown()).optional(), postIds: z.array(z.object({ status: z.string(), postUrl: z.string().optional() })).optional() }).parse(await post("https://api.ayrshare.com/api/post", body, { Authorization: `Bearer ${env("AYRSHARE_API_KEY")}`, ...(process.env.AYRSHARE_PROFILE_KEY && { "Profile-Key": env("AYRSHARE_PROFILE_KEY") }) }));
