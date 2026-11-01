@@ -2,8 +2,9 @@
 
 import { CheckIcon, XIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { useRef, useState } from "react";
-import { kitResponse, postJson } from "@/lib/contracts";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { apiError, kitResponse } from "@/lib/contracts";
 import { sampleProject } from "@/video/sample";
 import { projectSchema, type Project } from "@/video/schema";
 import { PUBLISH_CHANNELS } from "@/lib/distribution-contracts";
@@ -29,7 +30,7 @@ export function loadProject(): { project: Project; saved: boolean } {
 }
 
 type Draft = { channelId: string; text: string };
-type KitState = { status: "idle" | "pending" | "done" | "error"; error?: string; drafts: Draft[] };
+type KitState = { status: "idle" | "pending" | "done" | "error"; error?: string; paywall?: boolean; drafts: Draft[] };
 
 export function useKit() {
   const [s, setS] = useState<KitState>({ status: "idle", drafts: [] });
@@ -39,13 +40,19 @@ export function useKit() {
     const id = ++run.current;
     setS((p) => ({ ...p, status: "pending", error: undefined }));
     try {
-      const { posts } = await postJson("/api/kit", { project: loadProject().project, channels }, kitResponse);
+      const res = await fetch("/api/kit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ project: loadProject().project, channels }) });
+      const data = await res.json().catch(() => ({}));
       if (id !== run.current) return;
+      if (!res.ok) {
+        const error = apiError.safeParse(data).data?.error ?? `Request failed (${res.status})`;
+        return setS((p) => ({ ...p, status: "error", error, paywall: res.status === 402 }));
+      }
+      const { posts } = kitResponse.parse(data);
       const tags = (h?: string[]) => h?.map((t) => (t.startsWith("#") ? t : `#${t}`)).join(" ");
       setS({ status: "done", drafts: posts.map((p) => ({ channelId: p.channelId, text: [p.text, tags(p.hashtags)].filter(Boolean).join("\n\n") })) });
     } catch (e) {
       if (id !== run.current) return;
-      setS((p) => ({ ...p, status: "error", error: e instanceof Error ? e.message : "Unknown error" }));
+      setS((p) => ({ ...p, status: "error", paywall: false, error: e instanceof Error ? e.message : "Unknown error" }));
     }
   };
   const edit = (channelId: string, text: string) => setS((p) => ({ ...p, drafts: p.drafts.map((d) => (d.channelId === channelId ? { ...d, text } : d)) }));
@@ -94,6 +101,18 @@ export function KitSheet({
 }) {
   const [{ project, saved }] = useState(loadProject);
   const pending = kit.status === "pending";
+  const [credits, setCredits] = useState<number | null>(null);
+
+  // Signed-out (401) or missing (404) workspaces just hide the balance. Refetch after each run so it stays current.
+  useEffect(() => {
+    if (pending) return;
+    const controller = new AbortController();
+    fetch("/api/workspace", { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((w) => setCredits(typeof w?.credits === "number" ? w.credits : null))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [pending]);
 
   return (
     <div className="flex flex-col px-6 pt-6 pb-10 sm:px-8">
@@ -131,6 +150,10 @@ export function KitSheet({
       >
         {pending ? "Writing posts" : kit.status === "done" ? "Generate again" : `Generate ${picked.length} ${picked.length === 1 ? "post" : "posts"}`}
       </button>
+      <p className={`${label} mt-3`}>
+        Uses {picked.length} {picked.length === 1 ? "credit" : "credits"}
+        {credits !== null && ` · ${credits} left`}
+      </p>
 
       <div aria-live="polite" className="mt-6">
         {pending && (
@@ -150,6 +173,11 @@ export function KitSheet({
           <div role="alert" className="border-l-2 border-accent py-1 pl-4">
             <p className="text-[14px] font-medium">The kit could not be generated.</p>
             <p className="mt-1 font-mono text-[12px] leading-relaxed text-muted">{kit.error}</p>
+            {kit.paywall && (
+              <Link href="/connect" className="mt-2 inline-block text-[14px] font-medium underline decoration-line underline-offset-2 hover:decoration-ink">
+                Connect your agent to write copy on your own plan
+              </Link>
+            )}
           </div>
         )}
       </div>

@@ -1,5 +1,9 @@
 import type { Project } from "@/video/schema";
 
+/** Imgflip templates with text baked into the image: captions would overlap it. Matched by id or name. */
+const BAKED_TEXT = new Set(["222403160", "102156234", "Bernie I Am Once Again Asking For Your Support", "Mocking Spongebob", "Two Buttons", "Running Away Balloon", "Change My Mind", "UNO Draw 25 Cards", "Is This A Pigeon", "Epic Handshake"]);
+export const captionable = (t: { id: string; name: string }) => !BAKED_TEXT.has(t.id) && !BAKED_TEXT.has(t.name);
+
 const escape = (text: string) => text.replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[c]!));
 function lines(text: string, max = 28, count = 3) {
   const result: string[] = [];
@@ -17,7 +21,7 @@ export function memeSvg(image: string, top: string, bottom: string, project: Pic
   // Only embedded raster images enter the exported SVG. No external fetches or markup.
   if (!/^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(image)) throw new Error("Load a template image before exporting.");
   const panels = layout === "right-panels";
-  const text = (value: string, y: number) => lines(value, panels ? 20 : 28, panels ? 4 : 3).map((line, i) => `<text x="${panels ? 780 : 540}" y="${y + i * (panels ? 52 : 64)}" text-anchor="middle" font-family="Impact,Arial,sans-serif" font-weight="800" font-size="${panels ? 42 : 60}" fill="${panels ? "#111" : "white"}" stroke="${panels ? "white" : "#111"}" stroke-width="${panels ? 2 : 6}" paint-order="stroke">${escape(line)}</text>`).join("");
+  const text = (value: string, y: number) => lines(value, panels ? 20 : 28, panels ? 4 : 3).map((line, i) => `<text x="${panels ? 780 : 540}" y="${y + i * (panels ? 52 : 64)}" text-anchor="middle" font-family="Impact,Arial,sans-serif" font-weight="800" font-size="${panels ? 42 : 60}" fill="white" stroke="#000" stroke-width="${panels ? 8 : 10}" stroke-linejoin="round" paint-order="stroke">${escape(line)}</text>`).join("");
   const accent = /^#[\da-f]{3}([\da-f]{3})?$/i.test(project.theme.accent) ? project.theme.accent : "#ff4f17";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080"><rect width="1080" height="1080" fill="#f4f4f2"/><image href="${image}" x="0" y="0" width="1080" height="948" preserveAspectRatio="xMidYMid meet"/>${text(top, panels ? 175 : 80)}${text(bottom, panels ? 650 : 740)}<rect y="948" width="1080" height="132" fill="#111"/><rect y="948" width="12" height="132" fill="${accent}"/><text x="48" y="1025" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#f4f4f2">${escape(project.name.slice(0, 45))}</text></svg>`;
 }
