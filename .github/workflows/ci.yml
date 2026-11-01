@@ -18,6 +18,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm next typegen
       - run: pnpm tsc --noEmit
+      - run: pnpm check:render
       - run: pnpm lint
       - run: pnpm check:video
-      - run: pnpm check:render
