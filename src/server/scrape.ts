@@ -54,10 +54,37 @@ export function parseScrape(raw: unknown, url: string) {
 
 export type ProductPage = ReturnType<typeof parseScrape>;
 
+const exaResult = z.object({
+  results: z.array(z.object({ title: z.string().nullish(), text: z.string().nullish(), image: z.string().nullish(), favicon: z.string().nullish() })).min(1),
+});
+
+/** Fallback when Firecrawl isn't configured: Exa page contents, with the page's og:image standing in for a screenshot. */
+async function scrapeWithExa(url: string, key: string, signal: AbortSignal): Promise<ProductPage> {
+  const response = await fetch("https://api.exa.ai/contents", {
+    method: "POST",
+    headers: { "x-api-key": key, "Content-Type": "application/json" },
+    body: JSON.stringify({ urls: [url], text: { maxCharacters: 30_000 } }),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new ApiError(502, "Product scraping failed. Check Exa credits and try another URL.");
+  const parsed = exaResult.safeParse(await response.json());
+  if (!parsed.success || !parsed.data.results[0].text) throw new ApiError(502, "Could not read this product page. Try another public URL.");
+  const page = parsed.data.results[0];
+  const screenshot = assetUrl(page.image ?? undefined, url);
+  if (!screenshot) throw new ApiError(502, "This page has no preview image to use as the product shot. Try the product's home page.");
+  return {
+    url,
+    markdown: page.text!.slice(0, 30_000),
+    brand: { name: page.title || new URL(url).hostname, tagline: undefined, colors: [], logo: assetUrl(page.favicon ?? undefined, url), screenshot },
+  };
+}
+
 export async function scrapeProduct(value: string, signal: AbortSignal): Promise<ProductPage> {
   const url = publicUrl(value);
   const key = process.env.FIRECRAWL_API_KEY;
-  if (!key) throw new ApiError(503, "Product scraping is not configured. Set FIRECRAWL_API_KEY on the server.");
+  if (!key && process.env.EXA_API_KEY) return scrapeWithExa(url, process.env.EXA_API_KEY, signal);
+  if (!key) throw new ApiError(503, "Product scraping is not configured. Set FIRECRAWL_API_KEY or EXA_API_KEY on the server.");
   const response = await fetch("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

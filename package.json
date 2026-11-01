@@ -17,6 +17,7 @@
     "check:agents": "tsx --test scripts/check-agents.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "4.0.106",
     "@modelcontextprotocol/server": "2.4.0",
     "@phosphor-icons/react": "^2.1.10",
     "@remotion/bundler": "4.0.539",
