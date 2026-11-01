@@ -41,14 +41,25 @@ export function ChatEdit() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const latest = useRef(state.project);
+  useEffect(() => {
+    latest.current = state.project;
+  }, [state.project]);
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const instruction = text.trim();
     if (!instruction || pending) return;
     setPending(true);
     setNotice(null);
+    const sent = state.project;
     try {
-      const res = await postJson("/api/edit", { project: state.project, instruction, selection: { sceneId: scene.id, layerId: layer?.id ?? null } }, editResponse);
+      const res = await postJson("/api/edit", { project: sent, instruction, selection: { sceneId: scene.id, layerId: layer?.id ?? null } }, editResponse);
+      // Never clobber edits made while the request was in flight.
+      if (latest.current !== sent) {
+        setNotice({ kind: "error", text: "The project changed while the edit ran. Try again.", at: Date.now() });
+        return;
+      }
       edit(() => res.project);
       setNotice({ kind: "ok", text: res.summary, at: Date.now() });
       setText("");
