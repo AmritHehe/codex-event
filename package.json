@@ -13,7 +13,8 @@
     "check:distribution": "tsx --test scripts/check-distribution.ts",
     "studio": "remotion studio src/video/index.ts",
     "check:video": "tsx scripts/check-video.ts",
-    "check:ai": "tsx --test scripts/check-ai.ts"
+    "check:ai": "tsx --test scripts/check-ai.ts",
+    "check:agents": "tsx --test scripts/check-agents.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.4.0",
