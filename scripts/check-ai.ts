@@ -11,6 +11,7 @@ import { generateKit } from "../src/server/kit";
 import { providers, type Providers } from "../src/server/providers";
 import { ApiError, jsonRoute } from "../src/server/http";
 import { parseScrape, publicUrl, scrapeProduct } from "../src/server/scrape";
+import { CHANNELS } from "../src/distribution/channels";
 import { sampleProject } from "../src/video/sample";
 
 const source = {
@@ -100,7 +101,13 @@ test("kit deduplicates requested channels and rejects missing, duplicate or unsu
   // Any catalog channel works (briefed from its research notes); manual-only channels are refused.
   const reddit = [{ channelId: "reddit", text: "We built this after hitting the problem" }];
   assert.deepEqual(await generateKit({ project: sampleProject, channels: ["reddit"] }, signal, deps({ posts: reddit })), { posts: reddit });
-  await assert.rejects(generateKit({ project: sampleProject, channels: ["hacker-news"] }, signal, deps({ posts })), (e: Error) => e instanceof ApiError && e.status === 400);
+  const manual = await generateKit({ project: sampleProject, channels: ["hacker-news"] }, signal, {
+    scrapeProduct: async () => page,
+    structured: async () => { throw new Error("HN preparation must not generate copy"); },
+  });
+  assert.equal(manual.posts[0].channelId, "hacker-news");
+  assert.match(manual.posts[0].text, /write your own title/);
+  await assert.rejects(generateKit({ project: sampleProject, channels: CHANNELS.slice(0, 11).map((c) => c.id) }, signal, deps({ posts })), (e: Error) => e instanceof ApiError && e.status === 400);
 });
 
 test("actual API routes validate requests and responses end to end with stubbed providers", async () => {
