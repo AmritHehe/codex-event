@@ -6,14 +6,18 @@ import { useRef, useState } from "react";
 import { kitResponse, postJson } from "@/lib/contracts";
 import { sampleProject } from "@/video/sample";
 import { projectSchema, type Project } from "@/video/schema";
+import { PUBLISH_CHANNELS } from "@/lib/distribution-contracts";
 import { CHANNELS } from "./channels";
 import { ChannelLogo } from "./icons";
+import type { Community } from "./CommunityQueue";
+import { graphemes, isPublishable, type PublishId, type Publishing } from "./Publisher";
+import { Chip } from "./ui";
 
 const label = "font-mono text-[11px] uppercase tracking-[0.08em] tabular-nums text-muted";
 const byId = Object.fromEntries(CHANNELS.map((c) => [c.id, c]));
 
 /** The Studio autosaves here; fall back to the sample so the kit always has a source. */
-function loadProject(): { project: Project; saved: boolean } {
+export function loadProject(): { project: Project; saved: boolean } {
   try {
     const raw = localStorage.getItem("shipcast:project");
     const parsed = raw ? projectSchema.safeParse(JSON.parse(raw)) : null;
@@ -72,7 +76,22 @@ function CopyButton({ text, name }: { text: string; name: string }) {
   );
 }
 
-export function KitSheet({ picked, kit, onRemove }: { picked: string[]; kit: Kit; onRemove: (id: string) => void }) {
+export function KitSheet({
+  picked,
+  kit,
+  onRemove,
+  pub,
+  onPublish,
+  onQueue,
+}: {
+  picked: string[];
+  kit: Kit;
+  onRemove: (id: string) => void;
+  pub: Publishing;
+  onPublish: (id: PublishId) => void;
+  /** Reddit and Product Hunt drafts go to the community queue, since those are posted by hand. */
+  onQueue: (channelId: Community, text: string) => void;
+}) {
   const [{ project, saved }] = useState(loadProject);
   const pending = kit.status === "pending";
 
@@ -82,7 +101,7 @@ export function KitSheet({ picked, kit, onRemove }: { picked: string[]; kit: Kit
       <h2 className="mt-10 text-[clamp(32px,6vw,44px)] leading-[0.95] font-semibold tracking-[-0.045em]">Launch kit</h2>
       <p className="mt-4 max-w-[48ch] text-[16px] leading-[1.55] text-muted">
         One post per channel, written from {saved ? "your Studio project" : "the sample project"} <span className="text-ink">{project.name}</span>. Edit each draft,
-        then copy it out.
+        then copy it out or publish it to a connected account.
       </p>
 
       <ul className="mt-8 border-t border-line">
@@ -141,13 +160,23 @@ export function KitSheet({ picked, kit, onRemove }: { picked: string[]; kit: Kit
           {kit.drafts.map((d) => {
             const c = byId[d.channelId];
             const name = c?.name ?? d.channelId;
+            const target = PUBLISH_CHANNELS.find((t) => t.id === d.channelId);
+            const receipt = isPublishable(d.channelId) ? pub.receipts[d.channelId] : undefined;
+            const n = target ? graphemes(d.text) : d.text.length;
+            const community = d.channelId === "reddit" || d.channelId === "product-hunt" ? d.channelId : null;
             return (
               <div key={d.channelId} className="flex flex-col gap-2.5">
                 <div className="flex items-center gap-3">
                   {c && <ChannelLogo c={c} size={16} />}
                   <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{name}</span>
-                  <span className={label}>{d.text.length} chars</span>
-                  <CopyButton text={d.text} name={name} />
+                  {receipt &&
+                    (receipt.url ? (
+                      <a href={receipt.url} target="_blank" rel="noreferrer" aria-label={`${receipt.status} on ${name}, view post`}>
+                        <Chip tone="on">{receipt.status}</Chip>
+                      </a>
+                    ) : (
+                      <Chip tone="on">{receipt.status}</Chip>
+                    ))}
                 </div>
                 <textarea
                   value={d.text}
@@ -156,6 +185,22 @@ export function KitSheet({ picked, kit, onRemove }: { picked: string[]; kit: Kit
                   style={{ outline: "none" }}
                   className="min-h-[120px] w-full resize-none rounded-[6px] border border-line bg-canvas px-3.5 py-3 text-[14px] leading-[1.55] [field-sizing:content] focus:border-ink"
                 />
+                <div className="flex items-center gap-2">
+                  <span className={`${label} mr-auto ${target && n > target.limit ? "text-accent" : ""}`}>
+                    {target ? `${n} / ${target.limit}` : `${n} chars`}
+                  </span>
+                  <CopyButton text={d.text} name={name} />
+                  {community && (
+                    <button onClick={() => onQueue(community, d.text)} aria-label={`Send ${name} draft to the community queue`} className="press h-7 rounded-md bg-ink px-2.5 font-mono text-[11px] tracking-[0.08em] text-canvas uppercase">
+                      Queue
+                    </button>
+                  )}
+                  {target && (
+                    <button onClick={() => onPublish(target.id)} aria-label={`Publish ${name} draft`} className="press h-7 rounded-md bg-ink px-2.5 font-mono text-[11px] tracking-[0.08em] text-canvas uppercase">
+                      {target.mode === "aggregator" ? "Publish or schedule" : "Publish"}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}

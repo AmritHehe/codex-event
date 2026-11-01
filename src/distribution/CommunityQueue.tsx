@@ -1,55 +1,166 @@
 "use client";
+
+import { PlusIcon } from "@phosphor-icons/react";
 import { useEffect, useReducer, useState } from "react";
 import { z } from "zod";
 import { communityDraft } from "@/lib/distribution-contracts";
-import type { Project } from "@/video/schema";
+import { CHANNELS } from "./channels";
+import { ChannelLogo } from "./icons";
+import { loadProject } from "./Kit";
+import { SheetHead, Segmented, label, mono, note, pad, small } from "./ui";
 
-const key = "shipcast:community-drafts";
+const STORAGE = "shipcast:community-drafts";
 type Draft = z.infer<typeof communityDraft>;
-const names = { reddit: "Reddit", "product-hunt": "Product Hunt", "hacker-news": "Hacker News prep" };
+export type Community = Draft["channel"];
+const NAMES: Record<Community, string> = { reddit: "Reddit", "product-hunt": "Product Hunt", "hacker-news": "Hacker News prep" };
+const ORDER = Object.keys(NAMES) as Community[];
+const STATUS: { value: Draft["status"]; label: string }[] = [
+  { value: "draft", label: "Draft" },
+  { value: "ready", label: "Ready" },
+  { value: "done", label: "Submitted" },
+];
+const BYID = Object.fromEntries(CHANNELS.map((c) => [c.id, c]));
+export const isCommunity = (id: string): id is Community => id in NAMES;
 
-export function CommunityQueue({ project }: { project: Project }) {
+/** Queue entries persist in this browser only. Nothing here is ever posted automatically. */
+export function useCommunityQueue() {
   const [drafts, replace] = useReducer((_old: Draft[], next: Draft[]) => next, []);
   const [ready, markReady] = useReducer(() => true, false);
-  const [channel, setChannel] = useState<Draft["channel"]>("reddit");
   const [notice, setNotice] = useState("");
   useEffect(() => {
-    try { const raw = localStorage.getItem(key); if (raw) replace(z.array(communityDraft).parse(JSON.parse(raw))); }
-    catch { /* unavailable or corrupt browser storage */ }
+    try {
+      const raw = localStorage.getItem(STORAGE);
+      if (raw) replace(z.array(communityDraft).parse(JSON.parse(raw)));
+    } catch {
+      // unavailable or corrupt browser storage
+    }
     markReady();
   }, []);
+
   function update(next: Draft[]) {
     replace(next);
-    try { localStorage.setItem(key, JSON.stringify(next)); }
-    catch { setNotice("Browser storage is unavailable. Copy your drafts before leaving."); }
+    try {
+      localStorage.setItem(STORAGE, JSON.stringify(next));
+    } catch {
+      setNotice("Browser storage is unavailable. Copy your drafts before leaving.");
+    }
   }
-  function patch(id: string, data: Partial<Draft>) { update(drafts.map((d) => d.id === id ? { ...d, ...data } : d)); }
+  /** Hacker News bans AI-written posts, so its entries always start blank whatever text is offered. */
+  function add(channel: Community, text = "") {
+    const id = crypto.randomUUID();
+    update([...drafts, { id, channel, text: channel === "hacker-news" ? "" : text.slice(0, 20_000), status: "draft", projectName: loadProject().project.name }]);
+    return id;
+  }
+  const patch = (id: string, data: Partial<Draft>) => update(drafts.map((d) => (d.id === id ? { ...d, ...data } : d)));
+  const remove = (id: string) => update(drafts.filter((d) => d.id !== id));
+  return { drafts, ready, notice, setNotice, add, patch, remove };
+}
+export type Queue = ReturnType<typeof useCommunityQueue>;
+
+export function QueueSheet({ q, focus, back }: { q: Queue; focus?: string; back?: () => void }) {
+  const [focusId, setFocusId] = useState(focus);
+  useEffect(() => {
+    if (focusId) document.getElementById(`queue-${focusId}`)?.focus();
+  }, [focusId]);
+  const count = (s: Draft["status"]) => q.drafts.filter((d) => d.status === s).length;
+
   return (
-    <div className="space-y-4 py-6">
-      <h3 className="text-[20px] font-semibold tracking-tight">Community launch queue</h3>
-      <p className="max-w-2xl text-[14px] text-muted">Keep drafts here for review and manual submission. HN prep starts blank so you can write it yourself. Nothing in this queue is posted automatically.</p>
-      <div className="flex flex-wrap gap-2">
-        <label className="sr-only" htmlFor="community-channel">Community</label>
-        <select id="community-channel" value={channel} onChange={(e) => setChannel(e.target.value as Draft["channel"])} className="rounded-md border border-line bg-panel px-3 py-2 text-[13px]">{Object.entries(names).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>
-        <button disabled={!ready} onClick={() => update([...drafts, { id: crypto.randomUUID(), channel, text: "", status: "draft", projectName: project.name }])} className="press rounded-md border border-line px-3 py-2 text-[13px]">Add draft</button>
+    <div className="flex flex-col px-6 pt-6 pb-10 sm:px-8">
+      <SheetHead slug={`Queue · ${pad(q.drafts.length)} ${q.drafts.length === 1 ? "entry" : "entries"}`} title="Community queue" back={back}>
+        Drafts for communities you post to by hand. Nothing here is posted automatically, and the queue is saved in this browser.
+      </SheetHead>
+
+      <div className="mt-8 flex flex-col gap-3">
+        <span className={label}>Add an entry</span>
+        <div className="flex flex-wrap gap-2">
+          {ORDER.map((ch) => (
+            <button
+              key={ch}
+              disabled={!q.ready}
+              onClick={() => setFocusId(q.add(ch))}
+              className="press flex h-9 items-center gap-2 rounded-md border border-line px-3 text-[14px] font-medium hover:border-ink disabled:opacity-40"
+            >
+              <PlusIcon size={13} />
+              <ChannelLogo c={BYID[ch]} size={14} />
+              {ch === "hacker-news" ? "Hacker News" : NAMES[ch]}
+            </button>
+          ))}
+        </div>
+        <p className={note}>Hacker News bans AI-written posts, so its entries start blank. Write the title and text yourself.</p>
       </div>
-      {notice && <p role="status" className="text-[13px]">{notice}</p>}
-      <div className="divide-y divide-line border-t border-line">
-        {drafts.map((draft, i) => (
-          <article key={draft.id} className="space-y-3 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-[14px] font-medium">{names[draft.channel]} · {draft.projectName}</h4>
-              <label className="text-[12px]">Status<select aria-label={`Draft ${i + 1} status`} value={draft.status} onChange={(e) => patch(draft.id, { status: e.target.value as Draft["status"] })} className="ml-2 rounded-md border border-line bg-panel p-1.5"><option value="draft">Draft</option><option value="ready">Ready for manual submission</option><option value="done">Submitted manually</option></select></label>
-            </div>
-            <label className="sr-only" htmlFor={draft.id}>{names[draft.channel]} draft {i + 1}</label>
-            <textarea id={draft.id} value={draft.text} onChange={(e) => patch(draft.id, { text: e.target.value })} maxLength={20_000} rows={4} placeholder={draft.channel === "hacker-news" ? "Write your own title and submission checklist" : "Paste your draft, then review it for this community"} className="w-full rounded-md border border-line bg-panel p-3 text-[14px]" />
-            <div className="flex gap-4 text-[13px]">
-              <button onClick={() => navigator.clipboard.writeText(draft.text).then(() => setNotice("Draft copied."), () => setNotice("Clipboard is blocked. Select the text and copy manually."))} className="underline">Copy draft</button>
-              <button onClick={() => update(drafts.filter((d) => d.id !== draft.id))} className="text-muted hover:text-ink">Remove draft</button>
-            </div>
-          </article>
+
+      <dl className="mt-8 grid grid-cols-3 border-y border-line">
+        {STATUS.map((s, i) => (
+          <div key={s.value} className={`flex flex-col gap-2 py-4 ${i ? "border-l border-line pl-4" : ""}`}>
+            <dt className={label}>{s.label}</dt>
+            <dd className={`font-mono text-[28px] leading-none font-medium tracking-[-0.04em] tabular-nums ${s.value === "ready" && count("ready") ? "text-accent" : ""}`}>
+              {pad(count(s.value))}
+            </dd>
+          </div>
         ))}
-      </div>
+      </dl>
+      <p className={`${note} mt-3`}>Ready means reviewed for manual submission. Submitted means you posted it yourself.</p>
+
+      {q.notice && (
+        <p role="status" className="mt-6 border-l-2 border-ink pl-4 text-[13px]">
+          {q.notice}
+        </p>
+      )}
+
+      {q.ready && !q.drafts.length ? (
+        <div className="mt-6 flex flex-col gap-2 border-b border-line py-10">
+          <p className="text-[clamp(22px,3vw,28px)] font-semibold tracking-[-0.04em]">The queue is empty.</p>
+          <p className="max-w-[44ch] text-[14px] leading-[1.55] text-muted">Add an entry above, or send a Reddit or Product Hunt draft here from the launch kit.</p>
+        </div>
+      ) : (
+        <ol className="mt-6 border-t border-line">
+          {q.drafts.map((d, i) => {
+            const name = NAMES[d.channel];
+            return (
+              <li key={d.id} className="flex flex-col gap-3 border-b border-line py-5">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <span className={label}>Q {pad(i + 1)}</span>
+                    <ChannelLogo c={BYID[d.channel]} size={15} />
+                    <span className="truncate text-[14px] font-medium">{name}</span>
+                    <span className="hidden truncate text-[13px] text-muted sm:inline">· {d.projectName}</span>
+                  </span>
+                  <Segmented name={`Q ${pad(i + 1)} ${name} status`} value={d.status} options={STATUS} onChange={(status) => q.patch(d.id, { status })} />
+                </div>
+                <textarea
+                  id={`queue-${d.id}`}
+                  value={d.text}
+                  onChange={(e) => q.patch(d.id, { text: e.target.value })}
+                  maxLength={20_000}
+                  aria-label={`Q ${pad(i + 1)} ${name} draft`}
+                  placeholder={d.channel === "hacker-news" ? "Write your own title and submission checklist" : "Paste your draft, then review it for this community"}
+                  style={{ outline: "none" }}
+                  className="min-h-[120px] w-full resize-none rounded-[6px] border border-line bg-canvas px-3.5 py-3 text-[14px] leading-[1.55] [field-sizing:content] placeholder:text-faint focus:border-ink"
+                />
+                <div className="flex items-center gap-2">
+                  <span className={`${label} mr-auto`}>{d.text.length} chars</span>
+                  <button
+                    onClick={() =>
+                      navigator.clipboard.writeText(d.text).then(
+                        () => q.setNotice(`Q ${pad(i + 1)} copied.`),
+                        () => q.setNotice("Clipboard is blocked. Select the text and copy manually."),
+                      )
+                    }
+                    disabled={!d.text}
+                    aria-label={`Copy Q ${pad(i + 1)} ${name} draft`}
+                    className={small}
+                  >
+                    Copy
+                  </button>
+                  <button onClick={() => q.remove(d.id)} aria-label={`Remove Q ${pad(i + 1)} ${name} draft`} className={`${mono} press h-7 rounded-md px-2 text-muted hover:bg-hover hover:text-ink`}>
+                    Remove
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </div>
   );
 }
