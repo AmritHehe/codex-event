@@ -1,5 +1,7 @@
 import { loadFont as bricolage } from "@remotion/google-fonts/BricolageGrotesque";
 import { loadFont as dmSans } from "@remotion/google-fonts/DMSans";
+import { loadFont as geist } from "@remotion/google-fonts/Geist";
+import { loadFont as geistMono } from "@remotion/google-fonts/GeistMono";
 import { loadFont as instrumentSerif } from "@remotion/google-fonts/InstrumentSerif";
 import { loadFont as inter } from "@remotion/google-fonts/Inter";
 import { loadFont as jetbrains } from "@remotion/google-fonts/JetBrainsMono";
@@ -20,6 +22,8 @@ const FONTS: Record<FontName, { load: () => { fontFamily: string }; headingWeigh
   Sora: { load: () => sora("normal", { weights: ["400", "500", "700"], ...latin }), headingWeight: 700 },
   Syne: { load: () => syne("normal", { weights: ["400", "500", "800"], ...latin }), headingWeight: 800 },
   "JetBrains Mono": { load: () => jetbrains("normal", { weights: ["400", "500", "700"], ...latin }), headingWeight: 700 },
+  Geist: { load: () => geist("normal", { weights: ["400", "500", "600"], ...latin }), headingWeight: 500 },
+  "Geist Mono": { load: () => geistMono("normal", { weights: ["400", "500"], ...latin }), headingWeight: 500 },
 };
 
 const loaded = new Map<FontName, string>();

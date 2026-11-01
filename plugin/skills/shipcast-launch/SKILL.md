@@ -16,35 +16,40 @@ You are building a launch film for the user's product. The film is JSON (scenes 
    - brand colors (`<meta name="theme-color">`, CSS variables, logo colors) and fonts if obvious
    - a real product image: a brief `visuals` entry, `og:image`, a hero screenshot, or a product shot URL (https)
    Every fact in the film and copy must come from the brief or the pages you read. Use `proof` and `mentions` for proof, reuse `voice.sampleLines`, and never invent metrics, quotes, customers, logos or prices beyond them.
-4. **Create.** `shipcast.create_project` with the name, URL, `aspect: "16:9"` and a theme built from the brand (see Theme). Tell the user the Studio URL it returns.
-5. **Scenes.** `shipcast.put_scene` once per scene, in order:
-   1. **Hook** (60 to 75 frames): badge + a 3 to 6 word headline that names the pain or the payoff.
-   2. **Problem** (60 to 90): kicker + headline stating the problem in the customer's words.
-   3. **Product** (90 to 120, `layout: "split"`): kicker with the product name, headline with the core promise, short body, and the product image with `frame: "browser"` (or `"phone"` for mobile apps) and `kenBurns: true`.
-   4. **Features** (90 to 110): headline + `list` layer with 3 to 4 items, each under 6 words.
-   5. **Proof** (60 to 75, optional): one `stat` layer, only with a real number from the site.
-   6. **CTA** (75 to 90): headline + `cta` layer with the real call to action and `url` set to the product domain.
+4. **Direct before you build.** Answer in one line each: who buys this and the one question they ask; the product's native surface (what its output looks like: a notification, a feed, a dashboard, a terminal); **the one thread** the viewer follows start to end (an object, a number, a person); where **the turn** is (old way ends, new way lands). Write the concept as one sentence. If it needs two, it's two films.
+5. **Create.** `shipcast.create_project` with the name, URL, `aspect: "16:9"` and a theme built from the brand (see Theme). Tell the user the Studio URL it returns.
+6. **Scenes.** `shipcast.put_scene` once per scene, in order. The shape (adapt it to your concept, never pad it):
+   1. **Hook** (75 to 105 frames): the pain, in the first second. Show it, don't list it: `windows` (a cluttered desktop), a `peek` nobody answers, a `counter` ticking up. Headline 3 to 6 words.
+   2. **Problem** (60 to 90): the thread gets worse (the counter keeps climbing, the same object, a sharper line).
+   3. **The turn** (90 to 120): the product name once, on the moment the old way ends. Demonstrate it on its native surface: a `peek` with `press: true` (the human approves), the thread resolving (`counter` with `doneLabel`), or the product image (`layout: "split"`, `frame: "browser"`/`"phone"`, `kenBurns: true`).
+   4. **The rest of the product** (75 to 100): 3 to 4 features as `list` with `variant: "chips"` (short noun phrases) or `"checks"`.
+   5. **Proof** (60 to 75, optional): only numbers from the brief's `proof` (or a `mentions` source), as a `stat` or proof chips.
+   6. **CTA** (75 to 90): callback to the hook (the same object, resolved) + headline + `cta` with the real call to action and `url` set to the product domain.
    If a call returns a validation error, fix exactly what it names and call again.
-6. **Finish.** `shipcast.finish_project`, then tell the user the film is ready and they can edit any layer in the Studio.
-7. **Copy (if the user wants a launch kit).** Write drafts and save them with `shipcast.draft_posts`: an X thread (`x`), a LinkedIn post (`linkedin-personal`), a Product Hunt tagline (`product-hunt`). Follow Copy rules.
-8. **Memes (only if you can generate images).** Make 1 to 2 memes about the problem the product solves, then `shipcast.save_asset` with `kind: "meme"`. Skip this step if you have no image tool.
+7. **Finish.** `shipcast.finish_project`, then tell the user the film is ready and they can edit any layer in the Studio.
+8. **Copy (if the user wants a launch kit).** Write drafts and save them with `shipcast.draft_posts`: an X thread (`x`), a LinkedIn post (`linkedin-personal`), a Product Hunt tagline (`product-hunt`). Follow Copy rules.
+9. **Memes (only if you can generate images).** Make 1 to 2 memes about the problem the product solves, then `shipcast.save_asset` with `kind: "meme"`. Skip this step if you have no image tool.
 
 ## Writing the film
 
-- 30 fps. Total length 12 to 20 seconds. Scene `durationInFrames` between 60 and 120.
+- 30 fps. Total length 15 to 25 seconds. Scene `durationInFrames` between 60 and 120.
+- **Carry a thread, don't list features.** The object from one scene opens the next (the same counter, the same peek, the same window). A film of five unrelated demos reads as a slideshow.
+- **Flow never stops.** The engine already breathes the camera on every scene and lands headlines word by word; you keep it alive by giving every scene a second moving layer (a counter, chips, windows, a peek) beside its headline.
 - One idea per scene. Headlines of at most 7 words. Body text at most 12 words.
 - Highlight exactly one word per headline with asterisks: `"Ship it *loud*"`.
 - Layer order inside a scene is the reading order; entrances stagger automatically, so leave `delay` unset unless needed.
-- Transitions: first scene `"none"`, then vary between `"push"`, `"wipe"`, `"slide"`, `"fade"`. Don't repeat the same one twice in a row.
+- Transitions are handoffs: first scene `"none"`; then `"whip"` between beats of the same idea, `"zoom"` to push *into* the next thing (into the product, into the detail), `"ring"` for the reveal or the turn, `"fade"` only into the CTA. `push`, `wipe` and `slide` still work but read flatter. Don't repeat one twice in a row.
+- Headlines enter word by word by default (`enter: "words"`); leave `enter` unset unless a layer needs something else.
+- Layers: `windows` fills the frame behind everything else (put it first); `peek` drops from the top edge (`anchor: "notch"` springs it out of a MacBook notch, only for Mac apps); `counter` is a mono pill ticking `from` to `to` (seconds by default), and with `doneLabel` it stops mid-scene and flips to a checked state; `peek.press` presses the first button mid-scene, so pair it with a `counter` + `doneLabel` in the same scene for a satisfying stop.
 - Backgrounds: alternate `"mesh"` and `"grid"`/`"gradient"`; use `"solid"` for the stat scene.
 - Layer and scene ids: short, unique, stable (`hook`, `h1`, `h2`...). Keep ids unchanged when you update a scene.
 
 ## Theme
 
-- `background`, `surface`, `text`, `muted`: build a light or dark base that matches the brand site.
+- `background`, `surface`, `text`, `muted`: build a light or dark base that matches the brand site. Light grounds read more premium in motion; prefer light unless the brand is unmistakably dark.
 - `accent`: the brand's main color. It must be readable on `background` (contrast at least 3:1 for large text).
 - `accent2`: a softer second brand color, used only in background blobs.
-- Fonts (pick from the schema's enum): `headingFont` with character (Bricolage Grotesque, Space Grotesk, Sora, Syne), `bodyFont` neutral (Inter, DM Sans). Developer tools may use JetBrains Mono for both.
+- Fonts (pick from the schema's enum): `headingFont` with character (Bricolage Grotesque, Space Grotesk, Sora, Syne), `bodyFont` neutral (Inter, DM Sans). Developer tools may use JetBrains Mono for both. Geist / Geist Mono suit clean product brands. Counters always render in Geist Mono.
 
 ## Copy rules (humanised)
 

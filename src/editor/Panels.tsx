@@ -14,6 +14,9 @@ import {
   TextTIcon,
   TrashIcon,
   type Icon,
+  TimerIcon,
+  BellIcon,
+  AppWindowIcon,
 } from "@phosphor-icons/react";
 import { Thumbnail } from "@remotion/player";
 import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
@@ -30,10 +33,20 @@ export const LAYER_META: Record<LayerType, { label: string; icon: Icon }> = {
   list: { label: "List", icon: ListChecksIcon },
   stat: { label: "Stat", icon: ChartBarIcon },
   cta: { label: "Button", icon: CursorClickIcon },
+  counter: { label: "Counter", icon: TimerIcon },
+  peek: { label: "Peek", icon: BellIcon },
+  windows: { label: "Windows", icon: AppWindowIcon },
 };
 
 export const layerTitle = (l: Layer) => {
-  const raw = "text" in l ? l.text : l.type === "list" ? l.items[0] : l.type === "stat" ? `${l.prefix ?? ""}${l.value}${l.suffix ?? ""}` : "Screenshot";
+  const raw =
+    "text" in l ? l.text
+    : l.type === "list" ? l.items[0]
+    : l.type === "stat" ? `${l.prefix ?? ""}${l.value}${l.suffix ?? ""}`
+    : l.type === "counter" ? l.label
+    : l.type === "peek" ? l.title
+    : l.type === "windows" ? l.titles.join(", ")
+    : "Screenshot";
   return raw.replaceAll("*", "");
 };
 

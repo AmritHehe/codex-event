@@ -1,10 +1,11 @@
-import { linearTiming, TransitionSeries, type TransitionPresentation } from "@remotion/transitions";
+import { linearTiming, TransitionSeries, type TransitionPresentation, type TransitionPresentationComponentProps } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
+import { iris } from "@remotion/transitions/iris";
 import { pushCut } from "@remotion/transitions/push-cut";
 import { slide } from "@remotion/transitions/slide";
 import { wipe } from "@remotion/transitions/wipe";
 import type { CSSProperties } from "react";
-import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { LayerView, mix, unit, type Box } from "./layers";
 import { font } from "./fonts";
 import { autoDelay, TRANSITION_FRAMES, type Project, type Scene, type Theme } from "./schema";
@@ -58,7 +59,15 @@ function Background({ kind, theme }: { kind: Scene["background"]; theme: Theme }
   );
 }
 
+/** The camera never parks: a slow push with a sideways drift a quarter-cycle out of phase. */
+function breath(frame: number, frames: number, u: number) {
+  const t = frame / Math.max(1, frames);
+  const s = 1.015 + 0.035 * Easing.inOut(Easing.sin)(Math.min(1, t));
+  return `scale(${s}) translate(${Math.sin(t * Math.PI * 1.5) * 0.6 * u}px, ${Math.cos(t * Math.PI) * -0.3 * u}px)`;
+}
+
 export function SceneView({ scene, theme }: { scene: Scene; theme: Theme }) {
+  const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const u = unit(width, height);
   const pad = 7 * u;
@@ -84,7 +93,7 @@ export function SceneView({ scene, theme }: { scene: Scene; theme: Theme }) {
   });
 
   return (
-    <AbsoluteFill style={{ color: theme.text, fontFamily: font(theme.bodyFont).fontFamily }}>
+    <AbsoluteFill style={{ color: theme.text, fontFamily: font(theme.bodyFont).fontFamily, transform: breath(frame, scene.durationInFrames, u) }}>
       <Background kind={scene.background} theme={theme} />
       <AbsoluteFill style={{ padding: pad, ...column("center"), ...(split && { flexDirection: "row", gap: 5 * u }) }}>
         {split ? (
@@ -100,19 +109,51 @@ export function SceneView({ scene, theme }: { scene: Scene; theme: Theme }) {
   );
 }
 
+type Css = (p: number, entering: boolean) => CSSProperties;
+
+/** A transition as two pure style functions of progress (exiting scene, entering scene). */
+function cssPresentation(style: Css): TransitionPresentation<Record<string, never>> {
+  function Presentation({ children, presentationProgress: p, presentationDirection }: TransitionPresentationComponentProps<Record<string, never>>) {
+    return <AbsoluteFill style={style(p, presentationDirection === "entering")}>{children}</AbsoluteFill>;
+  }
+  return { component: Presentation, props: {} };
+}
+
+const easeIn = Easing.in(Easing.cubic);
+const easeOut = Easing.out(Easing.exp);
+
+/** Push-through cut: the old scene accelerates into the lens, the new one decelerates out of it. */
+const zoomThrough: Css = (p, entering) =>
+  entering
+    ? { transform: `scale(${1.12 - 0.12 * easeOut(p)})`, opacity: interpolate(p, [0.35, 0.6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), filter: `blur(${(1 - easeOut(p)) * 10}px)` }
+    : { transform: `scale(${1 + 1.4 * easeIn(p)})`, filter: `blur(${easeIn(p) * 18}px)` };
+
+const whipEase = Easing.inOut(Easing.exp);
+
+/** Whip pan: both scenes ride one strip leftward; speed spikes mid-move and the blur follows it. */
+const whip: Css = (p, entering) => {
+  const x = (entering ? 1 - whipEase(p) : -whipEase(p)) * 100;
+  return { transform: `translateX(${x}%)`, filter: `blur(${Math.sin(Math.PI * p) ** 3 * 22}px)` };
+};
+
 // Each presentation has its own props type; the series only needs "some presentation".
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PRESENTATIONS: Record<Exclude<Scene["transition"], "none">, () => TransitionPresentation<any>> = {
+const presentations = (width: number, height: number): Record<Exclude<Scene["transition"], "none">, () => TransitionPresentation<any>> => ({
+  zoom: () => cssPresentation(zoomThrough),
+  whip: () => cssPresentation(whip),
+  ring: () => iris({ width, height }),
   fade: () => fade(),
   slide: () => slide({ direction: "from-right" }),
   wipe: () => wipe({ direction: "from-left" }),
   push: () => pushCut(),
-};
+});
 
 export type LaunchVideoProps = { project: Project };
 
 export function LaunchVideo({ project }: LaunchVideoProps) {
   const { scenes, theme } = project;
+  const { width, height } = useVideoConfig();
+  const PRESENTATIONS = presentations(width, height);
   return (
     <AbsoluteFill style={{ background: theme.background }}>
       <TransitionSeries>

@@ -1,7 +1,7 @@
 "use client";
 
 import type { PlayerRef } from "@remotion/player";
-import { createContext, useContext, useEffect, useReducer, useRef, type RefObject } from "react";
+import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type RefObject } from "react";
 import { MOCK_SCREENSHOT, sampleProject } from "@/video/sample";
 import { PROJECT_STORAGE_KEY } from "@/lib/project-storage";
 import { autoDelay, projectSchema, sceneStarts, TRANSITION_FRAMES, type Layer, type LayerType, type Project, type Scene } from "@/video/schema";
@@ -86,6 +86,9 @@ export const LAYER_DEFAULTS: { [T in LayerType]: Omit<Extract<Layer, { type: T }
   list: { type: "list", items: ["First point", "Second point", "Third point"] },
   stat: { type: "stat", value: 100, suffix: "%", label: "Describe this number" },
   cta: { type: "cta", text: "Get started" },
+  counter: { type: "counter", label: "Waiting", from: 0, to: 45 },
+  peek: { type: "peek", title: "Needs you", body: "Approve to continue.", actions: ["Approve", "Deny"], press: true },
+  windows: { type: "windows", titles: ["Terminal", "Docs", "Chat", "Design"] },
 };
 
 export const sceneCopy = (s: Scene): Scene => ({
@@ -164,16 +167,25 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const scene = state.project.scenes.find((s) => s.id === state.sel.sceneId) ?? state.project.scenes[0];
   const layer = scene.layers.find((l) => l.id === state.sel.layerId) ?? null;
 
+  // Stable identities: LiveStrip's refetch effect depends on `edit`; a fresh one per render refetched forever
+  // and kept re-seeking the playhead, so the player couldn't play.
+  const actions = useMemo<Pick<Ctx, "select" | "edit" | "undo" | "redo" | "load">>(
+    () => ({
+      select: (sel) => dispatch({ type: "select", sel }),
+      edit: (fn, key, sel) => dispatch({ type: "edit", fn, key, sel, at: Date.now() }),
+      undo: () => dispatch({ type: "undo" }),
+      redo: () => dispatch({ type: "redo" }),
+      load: (project) => dispatch({ type: "load", project }),
+    }),
+    [],
+  );
+
   const value: Ctx = {
     state,
     scene,
     layer,
     player,
-    select: (sel) => dispatch({ type: "select", sel }),
-    edit: (fn, key, sel) => dispatch({ type: "edit", fn, key, sel, at: Date.now() }),
-    undo: () => dispatch({ type: "undo" }),
-    redo: () => dispatch({ type: "redo" }),
-    load: (project) => dispatch({ type: "load", project }),
+    ...actions,
     focus: (sceneId, layerId = null) => {
       dispatch({ type: "select", sel: { sceneId, layerId } });
       player.current?.pause();

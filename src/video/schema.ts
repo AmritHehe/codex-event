@@ -12,7 +12,7 @@ export const ASPECTS = {
 } as const;
 
 export const aspectSchema = z.enum(["16:9", "9:16", "1:1"]);
-export const animationSchema = z.enum(["fade", "slide-up", "slide-left", "pop", "blur", "typewriter", "none"]);
+export const animationSchema = z.enum(["words", "fade", "slide-up", "slide-left", "pop", "blur", "typewriter", "none"]);
 export const fontSchema = z.enum([
   "Inter",
   "Space Grotesk",
@@ -22,6 +22,8 @@ export const fontSchema = z.enum([
   "Sora",
   "Syne",
   "JetBrains Mono",
+  "Geist",
+  "Geist Mono",
 ]);
 
 const layerBase = {
@@ -58,6 +60,33 @@ export const listLayerSchema = z.object({
   ...layerBase,
   type: z.literal("list"),
   items: z.array(z.string()).min(1).max(6),
+  variant: z.enum(["checks", "chips"]).optional().describe("checks = ticked column (default); chips = a row of pills."),
+});
+
+export const counterLayerSchema = z.object({
+  ...layerBase,
+  type: z.literal("counter"),
+  label: z.string().describe("Mono micro-label, e.g. WAITING."),
+  from: z.number(),
+  to: z.number(),
+  format: z.enum(["time", "number"]).optional().describe("time = m:ss (default); number = plain integer."),
+  doneLabel: z.string().optional().describe("If set, the counter stops at `to` and flips to this label with a check."),
+});
+
+export const peekLayerSchema = z.object({
+  ...layerBase,
+  type: z.literal("peek"),
+  title: z.string(),
+  body: z.string().optional(),
+  actions: z.array(z.string()).max(2).optional().describe("Buttons; the first is primary."),
+  press: z.boolean().optional().describe("Press the primary button mid-scene (ripple + check)."),
+  anchor: z.enum(["top", "notch"]).optional().describe("top = drops from the frame edge; notch = springs out of a MacBook notch."),
+});
+
+export const windowsLayerSchema = z.object({
+  ...layerBase,
+  type: z.literal("windows"),
+  titles: z.array(z.string()).min(1).max(8).describe("App window titles. Drawn as a cluttered, drifting desktop behind the other layers."),
 });
 
 export const statLayerSchema = z.object({
@@ -83,6 +112,9 @@ export const layerSchema = z.discriminatedUnion("type", [
   listLayerSchema,
   statLayerSchema,
   ctaLayerSchema,
+  counterLayerSchema,
+  peekLayerSchema,
+  windowsLayerSchema,
 ]);
 
 export const sceneSchema = z.object({
@@ -91,7 +123,9 @@ export const sceneSchema = z.object({
   durationInFrames: z.number().int().min(TRANSITION_FRAMES * 2).max(600),
   layout: z.enum(["stack", "split"]).describe("stack = centered column; split = text beside media (landscape)."),
   background: z.enum(["solid", "gradient", "mesh", "grid"]),
-  transition: z.enum(["fade", "slide", "wipe", "push", "none"]).describe("Transition INTO this scene."),
+  transition: z
+    .enum(["zoom", "whip", "ring", "fade", "slide", "wipe", "push", "none"])
+    .describe("Transition INTO this scene. zoom = push through into the next; whip = fast motion-blurred pan; ring = iris reveal."),
   layers: z.array(layerSchema),
 });
 

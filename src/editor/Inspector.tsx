@@ -138,6 +138,40 @@ function LayerInspector({ layer }: { layer: Layer }) {
         )}
 
         {layer.type === "list" && (
+          <Field label="Style">{() => <Segmented label="Style" value={layer.variant ?? "checks"} options={["checks", "chips"] as const} onChange={(variant) => set({ variant })} />}</Field>
+        )}
+        {layer.type === "counter" && (
+          <>
+            <Field label="Label">{(id) => <TextInput id={id} value={layer.label} onChange={(e) => set({ label: e.target.value }, "label")} />}</Field>
+            <Field label="From">{(id) => <TextInput id={id} type="number" value={layer.from} onChange={(e) => set({ from: Number(e.target.value) || 0 }, "from")} />}</Field>
+            <Field label="To">{(id) => <TextInput id={id} type="number" value={layer.to} onChange={(e) => set({ to: Number(e.target.value) || 0 }, "to")} />}</Field>
+            <Field label="Format">{() => <Segmented label="Format" value={layer.format ?? "time"} options={["time", "number"] as const} onChange={(format) => set({ format })} />}</Field>
+            <Field label="Done label" hint="Set it to stop the counter mid-scene with a check.">
+              {(id) => <TextInput id={id} value={layer.doneLabel ?? ""} placeholder="Stopped" onChange={(e) => set({ doneLabel: e.target.value || undefined }, "doneLabel")} />}
+            </Field>
+          </>
+        )}
+        {layer.type === "peek" && (
+          <>
+            <Field label="Title">{(id) => <TextInput id={id} value={layer.title} onChange={(e) => set({ title: e.target.value }, "title")} />}</Field>
+            <Field label="Body">{(id) => <TextInput id={id} value={layer.body ?? ""} onChange={(e) => set({ body: e.target.value || undefined }, "body")} />}</Field>
+            <Field stack label="Buttons" hint="One per line, up to 2. The first is primary.">
+              {(id) => (
+                <TextArea id={id} rows={2} value={layer.actions?.join("\n") ?? ""} onChange={(e) => set({ actions: e.target.value.split("\n").slice(0, 2) }, "actions")} />
+              )}
+            </Field>
+            <Field label="Press button">{(id) => <Toggle id={id} checked={!!layer.press} onChange={(press) => set({ press })} />}</Field>
+            <Field label="Anchor">{() => <Segmented label="Anchor" value={layer.anchor ?? "top"} options={["top", "notch"] as const} onChange={(anchor) => set({ anchor })} />}</Field>
+          </>
+        )}
+        {layer.type === "windows" && (
+          <Field stack label="Windows" hint="One title per line, up to 8.">
+            {(id) => (
+              <TextArea id={id} rows={8} value={layer.titles.join("\n")} onChange={(e) => set({ titles: e.target.value.split("\n").slice(0, 8) }, "titles")} />
+            )}
+          </Field>
+        )}
+        {layer.type === "list" && (
           <Field stack label="Items" hint="One per line, up to 6.">
             {(id) => (
               <TextArea
