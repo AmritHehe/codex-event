@@ -63,13 +63,14 @@ export async function generate(url: string, signal: AbortSignal, deps: Providers
     deps.scrapeProduct(productUrl, signal),
     research(productUrl, signal, deps).catch(() => null),
   ]);
-  if (deps === providers && process.env.BLOB_READ_WRITE_TOKEN) page.brand.screenshot = await archiveScreenshot(workspaceId, page.brand.screenshot, signal);
+  // Archive to Blob when possible; an untrusted image host keeps its original URL instead of failing the film.
+  if (deps === providers && process.env.BLOB_READ_WRITE_TOKEN) page.brand.screenshot = await archiveScreenshot(workspaceId, page.brand.screenshot, signal).catch(() => page.brand.screenshot);
   const { project } = await deps.structured(filmSchema, FILM_PROMPT, {
     url: productUrl,
     brand: { name: page.brand.name, tagline: page.brand.tagline, colors: page.brand.colors },
     research: brief,
     pageText: brief ? page.markdown.slice(0, 4_000) : page.markdown,
-  }, signal);
+  }, signal, "high");
   const sourced = withSourcedStats(project, `${page.markdown}\n${brief ? JSON.stringify([brief.proof, brief.mentions]) : ""}`);
   return { project: withScreenshot(sourced, page), brand: page.brand, ...(brief ? { research: brief } : {}) };
 }
