@@ -47,5 +47,5 @@ next-env.d.ts
 # agent worktrees
 /.claude
 
-# publication idempotency ledger
+# publication ledger and agent workspaces (.data/workspaces)
 /.data/
