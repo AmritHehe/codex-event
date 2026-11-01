@@ -8,7 +8,7 @@ export function authenticate(request: Request) {
   const digest = (text: string) => createHash("sha256").update(text).digest();
   if (!timingSafeEqual(digest(header), digest(`Bearer ${key}`))) throw new DistributionError(401, "Enter the workspace publishing key.");
 }
-export async function readBody(request: Request) {
+export async function readBody(request: Request, maximum = 65_536) {
   if (!request.headers.get("content-type")?.startsWith("application/json")) throw new DistributionError(415, "Send application/json.");
   const reader = request.body?.getReader();
   if (!reader) throw new DistributionError(400, "Request body is required.");
@@ -18,7 +18,7 @@ export async function readBody(request: Request) {
     for (;;) {
       const { value, done } = await reader.read(); if (done) break;
       bytes += value.byteLength;
-      if (bytes > 65_536) { await reader.cancel(); throw new DistributionError(413, "Draft is too large."); }
+      if (bytes > maximum) { await reader.cancel(); throw new DistributionError(413, "Draft is too large."); }
       chunks.push(value);
     }
   } finally { reader.releaseLock(); }
