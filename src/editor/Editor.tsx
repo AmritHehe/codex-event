@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { LaunchVideo } from "@/video/LaunchVideo";
 import { ASPECTS, aspectSchema, FPS, projectDuration } from "@/video/schema";
 import { ChatEdit } from "./ChatEdit";
+import { ExportMenu } from "./Export";
 import { Inspector } from "./Inspector";
 import { LayersPanel, pad2, ScenesPanel } from "./Panels";
 import { EditorProvider, focusFrame, ops, useEditor } from "./store";
@@ -83,6 +84,7 @@ function EditorShell() {
           <ArrowArcRightIcon size={15} />
         </IconButton>
         <div className="ml-auto flex items-center gap-1.5">
+          <ExportMenu />
           <Link href="/distribution" className="press inline-flex h-7 items-center gap-1.5 rounded-md bg-ink px-2.5 text-[12.5px] font-medium text-canvas hover:bg-ink/85" aria-label="Distribute">
             <BroadcastIcon size={14} />
             <span className="max-sm:hidden">Distribute</span>
