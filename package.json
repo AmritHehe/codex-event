@@ -8,12 +8,17 @@
     "start": "next start",
     "lint": "eslint",
     "studio": "remotion studio src/video/index.ts",
-    "check:video": "tsx scripts/check-video.ts"
+    "check:video": "tsx scripts/check-video.ts",
+    "render-server": "tsx server/render.ts",
+    "check:render": "tsx --test scripts/check-render.ts",
+    "check:render:smoke": "tsx scripts/check-render-smoke.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@remotion/bundler": "4.0.539",
     "@remotion/google-fonts": "4.0.539",
     "@remotion/player": "^4.0.539",
+    "@remotion/renderer": "4.0.539",
     "@remotion/transitions": "4.0.539",
     "motion": "^14.9.0",
     "next": "16.4.3",
