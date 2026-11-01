@@ -95,15 +95,21 @@ export const sceneCopy = (s: Scene): Scene => ({
   layers: s.layers.map((l) => ({ ...l, id: newId() })),
 });
 
+/** Frames after scene start at which a layer enters; null when hidden (it never renders). */
+export function enterFrame(scene: Scene, layerId: string) {
+  const visible = scene.layers.filter((l) => !l.hidden);
+  const li = visible.findIndex((l) => l.id === layerId);
+  return li < 0 ? null : (visible[li].delay ?? autoDelay(li));
+}
+
 /** Frame that best shows a scene (past its intro transition) or a layer (after its entrance settles). */
 export function focusFrame(p: Project, sceneId: string, layerId?: string | null) {
   const i = Math.max(0, p.scenes.findIndex((s) => s.id === sceneId));
   const scene = p.scenes[i];
   const start = sceneStarts(p)[i];
   const last = start + scene.durationInFrames - TRANSITION_FRAMES - 1;
-  const visible = scene.layers.filter((l) => !l.hidden);
-  const li = visible.findIndex((l) => l.id === layerId);
-  const offset = li >= 0 ? (visible[li].delay ?? autoDelay(li)) + 24 : 45;
+  const enter = layerId ? enterFrame(scene, layerId) : null;
+  const offset = enter !== null ? enter + 24 : 45;
   return Math.max(start, Math.min(start + offset, last));
 }
 

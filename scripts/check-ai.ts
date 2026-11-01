@@ -99,6 +99,17 @@ test("kit deduplicates requested channels and rejects missing, duplicate or unsu
   await assert.rejects(generateKit({ ...input, channels: ["unknown"] }, signal, deps({ posts })), (e: Error) => e instanceof ApiError && e.status === 400);
 });
 
+test("kit supports the redesigned catalog and keeps HN preparation manual", async () => {
+  const posts = [{ channelId: "threads", text: "Meet our product" }];
+  assert.deepEqual(await generateKit({ project: sampleProject, channels: ["threads"] }, signal, deps({ posts })), { posts });
+  const manual = await generateKit({ project: sampleProject, channels: ["hacker-news"] }, signal, {
+    scrapeProduct: async () => page,
+    structured: async () => { throw new Error("HN preparation must not generate submission copy"); },
+  });
+  assert.equal(manual.posts[0].channelId, "hacker-news");
+  assert.match(manual.posts[0].text, /write your own title/);
+});
+
 test("actual API routes validate requests and responses end to end with stubbed providers", async () => {
   process.env.AI_GATEWAY_API_KEY = "test-only";
   Object.assign(providers, deps(sampleProject));

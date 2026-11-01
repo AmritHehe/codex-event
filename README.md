@@ -26,9 +26,9 @@ Restart `pnpm dev` after changing environment variables. Missing credentials ret
 
 1. Paste a public product URL on the landing page or in Studio. Generation creates an editable five-scene video using the real screenshot. In Studio, replacing a project is undoable.
 2. Select a scene or layer and use the instruction bar. A successful edit is one undo step. If you edit the project while waiting, the AI result is discarded so it cannot overwrite your changes.
-3. Click **Distribute** to save the current project immediately. Pick channels in **Your launch kit**, generate copy, edit the drafts, and copy them. Drafts save locally; a notice marks drafts from an earlier project version. Nothing is posted automatically.
+3. Click **Distribute** to save the current project immediately. Pick up to ten catalog channels, generate copy, edit the drafts, and copy them. HN receives a fixed preparation checklist, never generated submission copy. Nothing is posted automatically.
 
-`POST /api/generate`, `/api/edit`, and `/api/kit` follow `src/lib/contracts.ts`. Errors use `{ error: string }`: 400 invalid input, 413 request over 1 MB, 415 wrong content type, 503 missing configuration, 502 provider/validation failure, 504 timeout. Cancellation is supported in all three UI flows. This remains the plan's single-user localStorage demo; configure access control before exposing paid endpoints on a public deployment.
+`POST /api/generate`, `/api/edit`, and `/api/kit` follow `src/lib/contracts.ts`. Errors use `{ error: string }`: 400 invalid input, 413 request over 1 MB, 415 wrong content type, 503 missing configuration, 502 provider/validation failure, 504 timeout. Requests have bounded server timeouts; Studio generation also supports cancellation. This remains the plan's single-user localStorage demo; configure access control before exposing paid endpoints on a public deployment.
 
 ## Map
 
