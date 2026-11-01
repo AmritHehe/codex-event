@@ -15,7 +15,7 @@ export const publishChannel = z.enum(["x", "bluesky", "threads", "mastodon", "te
 export const httpsUrl = z.string().url().refine((s) => { const u = new URL(s); return u.protocol === "https:" && !u.username && !u.password; }, "Use a public HTTPS URL without credentials.");
 export const publishRequest = z.object({
   requestId: z.string().uuid(), channel: publishChannel, text: z.string().trim().min(1).max(5000),
-  mediaUrl: httpsUrl.optional(), scheduleAt: z.string().datetime().optional(),
+  renderJobId: z.string().uuid().optional(), mediaUrl: httpsUrl.optional(), scheduleAt: z.string().datetime().optional(),
   title: z.string().trim().min(1).max(100).optional(), boardId: z.string().regex(/^\d+$/).optional(),
   visibility: z.enum(["public", "unlisted", "private"]).default("private"),
 }).superRefine((data, ctx) => {
@@ -23,7 +23,7 @@ export const publishRequest = z.object({
   const length = [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(data.text)].length;
   if (length > config.limit) ctx.addIssue({ code: "custom", message: `${config.name} text is limited to ${config.limit} characters.`, path: ["text"] });
   if (config.mode === "direct" && (data.mediaUrl || data.scheduleAt)) ctx.addIssue({ code: "custom", message: "Direct publishing supports immediate text posts. Use an aggregator channel for media or scheduling." });
-  if (["tiktok", "youtube-shorts", "pinterest"].includes(data.channel) && !data.mediaUrl) ctx.addIssue({ code: "custom", message: "This channel requires a public media URL.", path: ["mediaUrl"] });
+  if (["tiktok", "youtube-shorts", "pinterest"].includes(data.channel) && !data.mediaUrl && !data.renderJobId) ctx.addIssue({ code: "custom", message: "This channel requires a public media URL.", path: ["mediaUrl"] });
   if (data.channel === "youtube-shorts" && !data.title) ctx.addIssue({ code: "custom", message: "YouTube requires a title.", path: ["title"] });
   if (data.channel === "pinterest" && !data.boardId) ctx.addIssue({ code: "custom", message: "Pinterest requires a board ID.", path: ["boardId"] });
 });

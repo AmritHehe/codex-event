@@ -1,12 +1,13 @@
+import { putAsset } from "../src/server/assets/blob";
 import { fork } from "node:child_process";
-import { rm } from "node:fs/promises";
+import { readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { RenderTask } from "./queue";
 import type { WorkerInput, WorkerOutput } from "./render-worker";
 
 /** Isolate crashes and kill stuck Chromium/render jobs before allowing the next job. */
 export function workerTask(root: string, serveUrl: string, outDir: string, timeoutMs = 480_000): RenderTask {
-  return async (project, jobId, progress) => {
+  return async (project, jobId, progress, workspaceId) => {
     const outputLocation = join(outDir, `${jobId}.mp4`);
     try {
       await new Promise<void>((resolve, reject) => {
@@ -23,6 +24,10 @@ export function workerTask(root: string, serveUrl: string, outDir: string, timeo
         child.once("exit", (code) => { clearTimeout(timer); if (done && code === 0) resolve(); else reject(new Error(failure)); });
         child.send({ project, serveUrl, outputLocation, browserExecutable: process.env.REMOTION_BROWSER_EXECUTABLE } satisfies WorkerInput);
       });
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        if ((await stat(outputLocation)).size > 100_000_000) throw new Error("Rendered video exceeds the 100 MB upload limit.");
+        return await putAsset(workspaceId ?? "anonymous", await readFile(outputLocation), "video/mp4");
+      }
     } catch (error) {
       await rm(outputLocation, { force: true });
       throw error;

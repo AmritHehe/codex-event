@@ -165,4 +165,6 @@ Everything here is server-side and independent of the MCP work. Where a workspac
 - [ ] B11.5 **Abuse protection.** Per-workspace and per-IP rate limits on `/api/generate`, `/api/kit`, `/api/edit` (credits spend money) and on `/mcp`. Vercel BotID on the public forms.
 - [ ] B11.6 **Deploy.** Vercel project for the web app (+ env via `vercel env`), render server on a long-running host (Railway/Fly) or Remotion Lambda, `RENDER_ORIGINS`/`NEXT_PUBLIC_RENDER_URL` wired, smoke test script against the deployed URLs.
 
+Priority PR (OAuth deferred at user request): Blob upload helper, screenshot archival when configured, authenticated image uploads, completed render uploads and server-side `renderJobId` resolution are implemented. Live Blob verification, Phase 10 workspace/save_asset integration and deployment remain pending; see `src/server/assets/README.md`.
+
 Order of value for the demo: B11.1 → B11.2 → B11.3, then the rest.
