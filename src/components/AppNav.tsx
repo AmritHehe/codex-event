@@ -1,10 +1,11 @@
 "use client";
 
-import { BroadcastIcon, FilmStripIcon, type Icon } from "@phosphor-icons/react";
+import { BroadcastIcon, FilmStripIcon, SquaresFourIcon, type Icon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS: { href: string; label: string; icon: Icon }[] = [
+  { href: "/dashboard", label: "Dashboard", icon: SquaresFourIcon },
   { href: "/studio", label: "Studio", icon: FilmStripIcon },
   { href: "/distribution", label: "Distribute", icon: BroadcastIcon },
 ];
