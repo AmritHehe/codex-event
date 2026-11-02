@@ -1,4 +1,5 @@
 "use client";
+import { ensureWorkspace } from "@/lib/workspace-client";
 
 import { CheckIcon, XIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
@@ -40,6 +41,7 @@ export function useKit() {
     const id = ++run.current;
     setS((p) => ({ ...p, status: "pending", error: undefined }));
     try {
+      await ensureWorkspace();
       const res = await fetch("/api/kit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ project: loadProject().project, channels }) });
       const data = await res.json().catch(() => ({}));
       if (id !== run.current) return;

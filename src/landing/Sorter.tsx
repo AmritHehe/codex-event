@@ -103,7 +103,7 @@ export function Sorter() {
           </div>
           <div className="flex flex-col justify-end gap-3 md:col-span-5">
             <p className="text-[19px] leading-snug font-medium tracking-[-0.01em] md:text-[22px]">
-              Posts itself where it&apos;s allowed. Drafts where it isn&apos;t.
+              Publishing adapters plus draft and manual workflows for the wider catalog.
             </p>
             <p className="max-w-[46ch] text-[15px] leading-[1.55] text-muted max-md:hidden md:text-[16px]">
               Some communities ban automated or AI-written posts. Shipcast follows each channel&apos;s rules: official APIs where they exist,

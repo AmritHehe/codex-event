@@ -198,7 +198,7 @@ test("SSE streams events, heartbeats and unsubscribes on disconnect", async () =
 });
 
 // ---------- credits ----------
-test("credits: kit and generate bill the cookie workspace only on success; anonymous calls stay free", async () => {
+test("credits: kit and generate bill the cookie workspace only on success; anonymous calls are refused", async () => {
   const original = { ...providers };
   const key = process.env.AI_GATEWAY_API_KEY;
   process.env.AI_GATEWAY_API_KEY = "test-only";
@@ -222,7 +222,7 @@ test("credits: kit and generate bill the cookie workspace only on success; anony
     stub(film);
     assert.equal((await post(generateRoute, { url: "https://example.com" })).status, 200);
     assert.equal(await credits(), 16);
-    assert.equal((await post(generateRoute, { url: "https://example.com" }, false)).status, 200, "anonymous still works");
+    assert.equal((await post(generateRoute, { url: "https://example.com" }, false)).status, 401, "anonymous calls cannot bypass credits");
     assert.equal(await credits(), 16);
     stub(film, true);
     assert.equal((await post(generateRoute, { url: "https://example.com" })).status, 502);

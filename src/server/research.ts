@@ -190,8 +190,8 @@ export async function research(value: string, signal: AbortSignal, deps: Provide
     return !!body && numbers(text).every((n) => body.includes(n));
   };
   const ownText = (sourceUrl: string) => own.find((p) => p.url === sourceUrl) && sourceText.get(sourceUrl);
-  // ponytail: quotes are checked on their first 40 normalized characters, enough to catch invented quotes.
-  const quoted = (text: string, sourceUrl: string) => !!sourceText.get(sourceUrl)?.includes(norm(text).slice(0, 40));
+  // Check the complete quote, including its ending; a matching prefix alone is insufficient.
+  const quoted = (text: string, sourceUrl: string) => !!sourceText.get(sourceUrl)?.includes(norm(text));
 
   const visuals = [
     ...own.map((p) => ({ url: safe(p.image), kind: "og" as const })),

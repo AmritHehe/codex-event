@@ -168,3 +168,8 @@ Everything here is server-side and independent of the MCP work. Where a workspac
 Priority PR (OAuth deferred at user request): Blob upload helper, screenshot archival when configured, authenticated image uploads, completed render uploads and server-side `renderJobId` resolution are implemented. Live Blob verification, Phase 10 workspace/save_asset integration and deployment remain pending; see `src/server/assets/README.md`.
 
 Order of value for the demo: B11.1 → B11.2 → B11.3, then the rest.
+
+
+### Consolidated readiness follow-up
+
+The readiness PR adds workspace-required paid calls (including edits), persistent global/workspace daily attempt caps, same-origin writes, private authenticated rendering with workspace ownership, restart recovery for completed renders, a completed-export publishing selector, fully decoded image validation, and MCP asset Blob storage. Platform API availability is labeled separately from implemented publishing destinations. See docs/deployment.md for the single-host persistent Docker deployment and credential-dependent acceptance checks. OAuth and direct-channel scheduling remain deferred. Live provider, storage, social account, and hosting verification require real credentials; automated tests do not certify those checks.

@@ -14,12 +14,11 @@ export function Agents() {
           <div className="md:col-span-7">
             <p className={`${LABEL} mb-4`}>04 Agents</p>
             <h2 className="text-[clamp(36px,5.6vw,96px)] leading-[0.92] font-semibold tracking-[-0.055em]">
-              {AGENTS.length} agents. One for every&nbsp;channel.
+              {AGENTS.length} workflows for your&nbsp;agent.
             </h2>
           </div>
           <p className="max-w-[44ch] self-end text-[16px] leading-[1.55] text-muted md:col-span-4 md:col-start-9 md:text-[17px]">
-            Each channel is worked by exactly one agent. It prepares what that channel wants, in the format it wants, and nothing goes out
-            until you approve the kit.
+            Connect your own agent and use these workflow guides to prepare launch assets. Review every draft; publishing is available only through the destinations listed in Connections.
           </p>
         </div>
 

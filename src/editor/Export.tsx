@@ -4,7 +4,7 @@ import { CheckIcon, DownloadSimpleIcon, ExportIcon, WarningIcon } from "@phospho
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { postJson, RENDER_URL, renderJob } from "@/lib/contracts";
+import { postJson, renderJob } from "@/lib/contracts";
 import { ASPECTS, aspectSchema, FPS, type Aspect } from "@/video/schema";
 import { useEditor } from "./store";
 import { Button, cx, Label, POP, useDismiss } from "./ui";
@@ -34,7 +34,7 @@ export function ExportMenu() {
     setOffline(false);
     setRows(picked.map((aspect) => ({ aspect, job: null, error: null })));
     for (const aspect of picked) {
-      postJson(`${RENDER_URL}/render`, { project: { ...project, aspect } }, renderJob)
+      postJson("/api/render", { project: { ...project, aspect } }, renderJob)
         .then((job) => patch(aspect, { job }))
         .catch((e) => {
           if (e instanceof TypeError) setOffline(true);
@@ -49,12 +49,12 @@ export function ExportMenu() {
     if (!running.length) return;
     const t = setTimeout(() => {
       for (const { aspect, job } of running) {
-        fetch(`${RENDER_URL}/render/${job!.jobId}`)
+        fetch(`/api/render/${job!.jobId}`)
           .then(async (res) => {
             if (!res.ok) throw new Error(`Status check failed (${res.status})`);
             patch(aspect, { job: renderJob.parse(await res.json()) });
           })
-          .catch((e) => patch(aspect, { error: e instanceof TypeError ? `Lost connection to ${RENDER_URL}` : message(e) }));
+          .catch((e) => patch(aspect, { error: e instanceof TypeError ? "Lost connection to the render service" : message(e) }));
       }
     }, 1000);
     return () => clearTimeout(t);
@@ -134,7 +134,7 @@ export function ExportMenu() {
               <div role="alert" className="mx-3 mb-3 flex gap-2 rounded-md border border-line bg-canvas p-2.5 text-[12px] leading-snug">
                 <WarningIcon size={14} weight="fill" className="mt-px shrink-0 text-accent" />
                 <p>
-                  <span className="font-medium">Render server not running on {RENDER_URL}.</span>{" "}
+                  <span className="font-medium">Render service unavailable.</span>{" "}
                   <span className="text-muted">
                     Start it with <code className="font-mono text-[11px] text-ink">pnpm render-server</code> and try again.
                   </span>
@@ -167,7 +167,7 @@ function JobRow({ row: { aspect, job, error } }: { row: Row }) {
         <span className="text-ink">{aspect}</span>
         <span className={cx("uppercase", failed ? "text-accent" : "text-muted")}>{status}</span>
         {done && (
-          <a href={new URL(job.url!, RENDER_URL).href} download className="ml-auto inline-flex items-center gap-1 font-sans text-[12px] font-medium text-ink underline-offset-2 hover:underline">
+          <a href={job.url!} download className="ml-auto inline-flex items-center gap-1 font-sans text-[12px] font-medium text-ink underline-offset-2 hover:underline">
             <DownloadSimpleIcon size={12} />
             Download
           </a>

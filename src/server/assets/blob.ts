@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { put } from "@vercel/blob";
 import { createHash, randomUUID } from "node:crypto";
 import { DistributionError } from "../distribution/http";
@@ -6,6 +7,7 @@ const extensions: Record<AssetType, string> = { "image/png": "png", "image/jpeg"
 export async function putAsset(workspaceId: string, bytes: Uint8Array, type: AssetType): Promise<string> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) throw new DistributionError(503, "Configure Vercel Blob storage before uploading assets.");
   if (!bytes.byteLength || bytes.byteLength > (type === "video/mp4" ? 100_000_000 : 5_000_000)) throw new DistributionError(413, "Asset exceeds the upload limit.");
+  if(type !== "video/mp4") await validateImage(bytes);
   const prefix = createHash("sha256").update(workspaceId).digest("hex");
   const result = await put(`workspaces/${prefix}/${randomUUID()}.${extensions[type]}`, Buffer.from(bytes), { access: "public", contentType: type, addRandomSuffix: false, abortSignal: AbortSignal.timeout(120_000) });
   return result.url;
@@ -31,4 +33,9 @@ export async function archiveScreenshot(workspaceId: string, url: string, signal
   try { for (;;) { const { done, value } = await reader.read(); if (done) break; length += value.length; if (length > 5_000_000) { await reader.cancel(); throw new DistributionError(413, "Screenshot exceeds 5 MB."); } chunks.push(value); } }
   finally { reader.releaseLock(); }
   return putAsset(workspaceId, Buffer.concat(chunks), type);
+}
+
+export async function validateImage(bytes: Uint8Array) {
+  try { await sharp(bytes,{limitInputPixels:16_000_000}).rotate().png().toBuffer(); }
+  catch { throw new DistributionError(400,"Image cannot be decoded or exceeds 16 megapixels."); }
 }

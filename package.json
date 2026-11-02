@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "check:readiness": "tsx --test scripts/check-readiness.ts",
     "check:assets": "tsx --test scripts/check-assets.ts",
     "check:distribution": "tsx --test scripts/check-distribution.ts",
     "studio": "remotion studio src/video/index.ts",
@@ -35,6 +36,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "remotion": "^4.0.539",
+    "sharp": "^0.35.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {

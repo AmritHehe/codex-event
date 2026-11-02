@@ -1,3 +1,4 @@
+import { ApiError } from "../http";
 import { createHash, timingSafeEqual } from "node:crypto";
 
 export class DistributionError extends Error { constructor(public status: number, message: string) { super(message); } }
@@ -27,5 +28,5 @@ export async function readBody(request: Request, maximum = 65_536) {
 }
 export const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 export function failure(error: unknown) {
-  return reply({ error: error instanceof DistributionError ? error.message : "The provider request failed. Please try again." }, error instanceof DistributionError ? error.status : 502);
+  return reply({ error: (error instanceof DistributionError || error instanceof ApiError) ? error.message : "The provider request failed. Please try again." }, (error instanceof DistributionError || error instanceof ApiError) ? error.status : 502);
 }

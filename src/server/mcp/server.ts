@@ -1,3 +1,4 @@
+import { paidAttempt } from "@/server/limits";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/server";
@@ -53,6 +54,7 @@ const handlers: Handlers = {
   },
   async research_product({ url }, { store, workspaceId, signal }) {
     // Server-paid (Exa + model), so it costs 1 credit: reserved first, refunded if research fails.
+    await paidAttempt(workspaceId);
     const remaining = await store.spendCredits(workspaceId, 1);
     try {
       const brief = await research(url, signal);
@@ -109,7 +111,7 @@ const handlers: Handlers = {
   async save_asset({ projectId, kind, url, dataUrl, caption }, { store, workspaceId }) {
     const asset = await store.saveAsset(workspaceId, projectId, { kind, caption, ...(url ? { url } : decodeImage(dataUrl!)) });
     store.publish(workspaceId, { type: "asset.saved", projectId, assetId: asset.id, kind });
-    return { ok: true, assetId: asset.id };
+    return { ok: true, assetId: asset.id, url: asset.url ?? `/api/workspace/assets/${asset.id}` };
   },
   async draft_posts({ projectId, posts }, { store, workspaceId }) {
     const unknown = posts.map((p) => p.channelId).filter((id) => !CHANNELS.some((c) => c.id === id));

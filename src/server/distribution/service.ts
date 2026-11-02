@@ -1,3 +1,5 @@
+import { workspaceFrom } from "../workspace/http";
+import { ownedRender } from "../render-client";
 import { resolveRenderMedia } from "../assets/render-media";
 import { publishReceipt, publishRequest, type PublishInput, type PublishReceipt } from "@/lib/distribution-contracts";
 import { publish, requireConnection } from "./adapters";
@@ -14,7 +16,11 @@ export function createPublishHandler(deps: { publish: (input: PublishInput, sign
       const recovered = await deps.ledger.recover(input);
       if (recovered) return reply(recovered);
       if (input.renderJobId && input.mediaUrl) throw new DistributionError(400, "Send either renderJobId or mediaUrl, not both.");
-      const mediaUrl = input.renderJobId ? await (deps.resolveRenderMedia ?? resolveRenderMedia)(input.renderJobId) : input.mediaUrl;
+      if(input.renderJobId && !deps.resolveRenderMedia) {
+        const id=await workspaceFrom(request); if(!id) throw new DistributionError(401,"Create a workspace before publishing a render.");
+        await ownedRender(id,input.renderJobId);
+      }
+      const mediaUrl = input.renderJobId ? await (deps.resolveRenderMedia ?? resolveRenderMedia)(input.renderJobId, undefined, (await workspaceFrom(request)) ?? undefined) : input.mediaUrl;
       if (input.renderJobId && ["x", "bluesky", "threads", "mastodon", "telegram"].includes(input.channel)) throw new DistributionError(400, "Render media is supported through aggregator destinations.");
       if (input.scheduleAt && Date.parse(input.scheduleAt) < Date.now() + 60_000) throw new DistributionError(400, "Choose a schedule at least one minute in the future.");
       deps.requireConnection(input.channel);

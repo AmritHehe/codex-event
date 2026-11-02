@@ -1,6 +1,6 @@
 # Shipcast
 
-Building is solved. Distribution isn't. Shipcast turns a product into launch videos, threads and memes, editable layer by layer, and gets them onto 66 channels.
+Building is solved. Distribution isn't. Shipcast turns a product into launch videos, threads and memes, editable layer by layer, with a 66-channel launch catalog, ten publishing adapters, and draft/manual workflows.
 
 ## Run it
 
@@ -22,13 +22,13 @@ Copy `.env.example` to `.env.local` and fill in the server-only keys:
 - `FIRECRAWL_API_KEY`: connect Firecrawl through [Vercel Marketplace](https://vercel.com/marketplace/firecrawl) (`vercel integration add firecrawl`, then `vercel env pull .env.local`), or use an existing Firecrawl key.
 - `AI_GATEWAY_API_KEY`: an API key from [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). Vercel OIDC (`VERCEL_OIDC_TOKEN`) also works. Set `AI_MODEL` to change providers without changing code.
 
-Restart `pnpm dev` after changing environment variables. Missing credentials return a clear 503 error; provider calls are never made from the browser. Firecrawl's [v2 scrape endpoint](https://docs.firecrawl.dev/api-reference/endpoint/scrape) supplies markdown, brand colors, logo, and screenshot. [AI SDK structured output](https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data) validates every generation against zod. Screenshot URLs from Firecrawl expire, so regenerate before exporting an old project.
+Restart `pnpm dev` after changing environment variables. Missing credentials return a clear 503 error; provider calls are never made from the browser. Firecrawl's [v2 scrape endpoint](https://docs.firecrawl.dev/api-reference/endpoint/scrape) supplies markdown, brand colors, logo, and screenshot. [AI SDK structured output](https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data) validates every generation against zod. With Blob configured, screenshots are archived when their host is trusted. Without Blob, provider URLs may expire.
 
 1. Paste a public product URL on the landing page or in Studio. Generation creates an editable five-scene video using the real screenshot. In Studio, replacing a project is undoable.
 2. Select a scene or layer and use the instruction bar. A successful edit is one undo step. If you edit the project while waiting, the AI result is discarded so it cannot overwrite your changes.
 3. Click **Distribute** to save the current project immediately. Pick channels in **Your launch kit**, generate copy, edit the drafts, and copy them. Drafts save locally; a notice marks drafts from an earlier project version. Nothing is posted automatically.
 
-`POST /api/generate`, `/api/edit`, and `/api/kit` follow `src/lib/contracts.ts`. Errors use `{ error: string }`: 400 invalid input, 413 request over 1 MB, 415 wrong content type, 503 missing configuration, 502 provider/validation failure, 504 timeout. Cancellation is supported in all three UI flows. This remains the plan's single-user localStorage demo; configure access control before exposing paid endpoints on a public deployment.
+`POST /api/generate`, `/api/edit`, and `/api/kit` follow `src/lib/contracts.ts`. Errors use `{ error: string }`: 400 invalid input, 413 request over 1 MB, 415 wrong content type, 503 missing configuration, 502 provider/validation failure, 504 timeout. Cancellation is supported in all three UI flows. Paid endpoints require a workspace and apply persistent daily attempt limits. The browser creates a workspace automatically. See [production deployment](docs/deployment.md) for the supported persistent single-host setup.
 
 ## Map
 
@@ -49,3 +49,5 @@ Restart `pnpm dev` after changing environment variables. Missing credentials ret
 - Don't change `src/video/schema.ts` in a feature PR without calling it out in the PR description: it is shared by the editor, AI generation and the render server.
 
 See "Two tracks" in `PLAN.md`: backend items are prefixed B, frontend items F. API shapes live in `src/lib/contracts.ts`. UI rules live in `DESIGN.md`.
+
+Run `pnpm check:readiness` for budget, session, image-decoding, private-render and restart checks.
